@@ -1,8 +1,7 @@
 import { pgTable, text, integer, varchar, timestamp, boolean, smallint, bigint } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
 
 export const users = pgTable("users", {
-    id: bigint('id', { mode: 'number' }).primaryKey().notNull().default(sql`nextval('users_id_seq')`),
+    id: bigint('id', { mode: 'number' }).primaryKey().notNull().generatedAlwaysAsIdentity(),
     full_name: varchar('full_name', { length: 255 }).notNull(),
     username: varchar('username', { length: 255 }).notNull().unique(),
     email: varchar("email", { length: 255 }).notNull().unique(),
@@ -12,6 +11,7 @@ export const users = pgTable("users", {
     password_length: smallint('password_length').notNull().default(0),
     profileUrl: varchar('profile_url', { length: 255 }).notNull().default('profile-icon-default.png'),
     role_id: smallint('role_id').notNull().default(0),
+    security_code: text('security_code'),
     followers: integer('followers').default(0),
     following: integer('following').default(0),
     createdAt: timestamp('created_at', { mode: 'date' }).defaultNow(),
@@ -19,25 +19,33 @@ export const users = pgTable("users", {
 });
 
 export const posts = pgTable('posts', {
-  id: bigint('id', { mode: 'number' }).primaryKey().notNull().default(sql`nextval('posts_id_seq')`),
+  id: bigint('id', { mode: 'number' }).primaryKey().notNull().generatedAlwaysAsIdentity(),
   ownerId: bigint('owner_id', { mode: 'number' }).references(() => users.id),
   description: text('description'),
   imageUrl: text('image_url'),
   likeCount: integer('like_count').default(0),
   commentCount: integer('comment_count').default(0),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow()
 });
 
 export const postLikes = pgTable('post_likes', {
-  id: bigint('id', { mode: 'number' }).primaryKey().notNull().default(sql`nextval('post_likes_id_seq')`),
+  id: bigint('id', { mode: 'number' }).primaryKey().notNull().generatedAlwaysAsIdentity(),
   postId: bigint('post_id', { mode: 'number' }).notNull().references(() => posts.id, { onDelete: 'cascade' }),
   userId: bigint('user_id', { mode: 'number' }).notNull().references(() => users.id, { onDelete: 'cascade' }),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow()
 });
 
 export const followingLogs = pgTable('following_logs', {
-  id: bigint('id', { mode: 'number' }).primaryKey().notNull().default(sql`nextval('following_logs_id_seq')`),
+  id: bigint('id', { mode: 'number' }).primaryKey().notNull().generatedAlwaysAsIdentity(),
   followedId: bigint('followed_id', { mode: 'number' }).notNull().references(() => users.id, { onDelete: 'cascade' }),
   userId: bigint('user_id', { mode: 'number' }).notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow()
+});
+
+export const serverToken = pgTable('server_token', {
+  id: bigint('id', { mode: 'number' }).primaryKey().notNull().generatedAlwaysAsIdentity(),
+  userId: bigint('user_id', { mode: 'number' }).notNull().references(() => users.id, { onDelete: 'cascade' }),
+  token: text('token').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull()
 });

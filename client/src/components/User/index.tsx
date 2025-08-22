@@ -2,12 +2,12 @@ import { Route, Outlet, Navigate } from 'react-router-dom';
 
 import Home from './Home';
 import Profile from './Profile';
-import { ProfilePosts } from './Helper/Profile';
 import SearchPage from './Search';
+import Settings from './Settings';
 
 import { Protection, IsMobile } from '../../hooks';
 import { MobileNav, Sidebar } from '../Navigation';
-import { ProfileInfo } from './Helper/Profile';
+import { ProfileInfo, ProfilePosts } from './Helper/Profile';
 import { useUser } from '../../context/UserContext';
 
 function UserLayout() {
@@ -40,11 +40,12 @@ export default function UserRoutes() {
                <UserLayout /> 
             </Protection>}>
             <Route path="home" index element={<Home />} />
-            <Route path="/profile" element={<Navigate to={`/profile/${user?.username}`} />} />
-            <Route path="/profile/:username" element={<Profile />} >
+            <Route path="profile" element={<Navigate to={`/profile/${user?.username}`} />} />
+            <Route path="profile/:username" element={<Profile />} >
                 <Route index element={<ProfileInfo />} />
                 <Route path="posts" element={<ProfilePosts />} />
             </Route>
+            <Route path="settings" element={<Settings />} />
             <Route path="search" element={<SearchPage />} />
             <Route path="search/:content" element={<SearchPage />} />
         </Route>

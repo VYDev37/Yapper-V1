@@ -20,6 +20,8 @@
 - Run `pnpm install`
 - Run `pnpm start`
 
+- Developer Note: Make sure to use an actual gmail username for email_user and [Google App Password](https://support.google.com/accounts/answer/185833?hl=en) for the email_pass
+
 # Frontend
 - Open new terminal
 - Run `cd client`
@@ -31,19 +33,21 @@
 - Register Page Background: [@Pikisuperstar in Freepik](https://www.freepik.com/author/pikisuperstar)
 - Verified Icon: [@oelhoem in Freepik](https://www.freepik.com/author/oelhoem/icons)
 - Default Profile Picture: [Freeiconspng in Google](https://www.freeiconspng.com/img/898)
+- App Icon (Vite Icon): [Vite](https://vite.dev)
 
 ## Features
-[x] Login
-[x] Register
-[ ] Email verification
-[x] Basic Security Functions (for pages)
-[x] Sidebar
-[x] Home Page
-[x] Upload, Like and Delete posts (images are also supported)
-[ ] Comment Post
-[ ] Report Post
-[x] Search Posts
-[x] Viewing Profile + Functionalities including: Follow, User Posts, and Edit (for owners)
-[ ] Notifications Page
-[ ] Messages Page
-[ ] Settings Page
+- [x] Login
+- [x] Register
+- [x] Email verification
+- [x] Reset Password
+- [x] Basic Security Functions (for pages)
+- [x] Sidebar
+- [x] Home Page
+- [x] Upload, Like and Delete posts (images are also supported)
+- [ ] Comment Post
+- [ ] Report Post
+- [x] Search Posts
+- [x] Viewing Profile + Functionalities including: Follow, User Posts, and Edit (for owners)
+- [ ] Notifications Page
+- [ ] Messages Page
+- [x] Settings Page

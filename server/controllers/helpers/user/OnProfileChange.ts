@@ -7,14 +7,17 @@ import db from "../../../database/pool";
 import { eq } from "drizzle-orm";
 import { users } from "../../../database/schema";
 
-const OnProfileChange = async (c: Context, body: any, userId: number) => {
-    const profileUrl: string = body.profileUrl;
-    const fixedName = profileUrl?.trim().toLowerCase();
+interface ProfileChangeBody {
+    profileUrl: string;
+}
 
-    if (!IsImage(fixedName)) 
+const OnProfileChange = async (c: Context, body: ProfileChangeBody, userId: number) => {
+    const profileUrl: string = body.profileUrl?.trim().toLowerCase();
+
+    if (!IsImage(profileUrl)) 
         return c.json({ message: "No file uploaded." }, HTTPStatus.BAD_REQUEST);
 
-    await db.update(users).set({ profileUrl: fixedName }).where(eq(users.id, userId));
+    await db.update(users).set({ profileUrl }).where(eq(users.id, userId));
 
     return c.json({ message: 'Success.' }, HTTPStatus.OK);
 }

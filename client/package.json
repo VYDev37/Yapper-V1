@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host",
     "start": "bun run dev",
-    "build": "tsc -b && vite build",
+    "build": "rimraf ./build && react-scripts build && rimraf ./build/**/*.map",
     "lint": "eslint .",
     "preview": "vite preview"
   },

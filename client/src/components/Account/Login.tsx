@@ -100,7 +100,7 @@ export default function Login() {
                         </div>)}
                     <button type="submit" className="btn btn-yapper mt-3" disabled={loading}>Login</button>
                     <div className="text-center mt-3">
-                        <p><a href="/recovery" style={{ color: 'black', textDecoration: 'none' }}>Forgot Password?</a></p>
+                        <p><a href="/forget-password" style={{ color: 'black', textDecoration: 'none' }}>Forgot Password?</a></p>
                     </div>
                 </form>
                 <hr />

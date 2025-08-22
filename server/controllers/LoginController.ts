@@ -39,7 +39,7 @@ export default class LoginController {
                     email_verified: userRecord.email_verified,
                     createdAt: userRecord.createdAt
                 };
-                const token = jwt.sign(userData, process.env.JWT_SECRET!, { expiresIn: '1h' });
+                const token = jwt.sign(userData, Bun.env.JWT_SECRET!, { expiresIn: '1h' });
                 setCookie(c, 'token', token, {
                     httpOnly: true,
                     secure: false,

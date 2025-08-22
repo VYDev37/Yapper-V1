@@ -19,7 +19,15 @@ UserRouter.get('/user-info/:username', Authorization, (c) => UserController.GetP
 UserRouter.post('/logout', UserController.Logout);
 
 UserRouter.patch('/update-data/:type/:id', Authorization, UserController.UpdateUser);
-
 UserRouter.post('/add-follower/:id', Authorization, UserController.AddFollow);
+
+// mailing
+//UserRouter.post('/verify-otp/:type/:otp', Authorization, UserController.VerifyOTP);
+//UserRouter.post('/send-mail', Authorization, UserController.Mailer);
+UserRouter.post('/send-otp-mail/:type', Authorization, UserController.SendVerificationMail);
+
+// Forget Password
+UserRouter.post('/send-reset-password', UserController.SendResetPassword);
+UserRouter.post('/reset-password/:id/:token', UserController.ResetPassword);
 
 export default UserRouter;

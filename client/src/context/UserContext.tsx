@@ -17,12 +17,14 @@ interface User {
     following: number;
     followed: boolean; // custom data
     createdAt: Date | string;
+    code: string;
 }
 
 interface UserContextType {
     user: User | null;
     loading: boolean;
     isLoggedIn: boolean;
+
     HasRoleAccess: (minRoleId: number) => boolean;
     RefreshUser: () => Promise<void>;
     UpdateUser: () => Promise<void>;

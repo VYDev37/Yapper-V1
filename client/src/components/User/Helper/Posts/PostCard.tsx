@@ -44,7 +44,7 @@ export default function PostCard({ displayedPosts, isMain, actions, user, isSelf
                                                 </div>
                                             </div>
                                         </div>
-                                        {isMain && (
+                                        {(isMain || isSelf) && (
                                             <span className="text-muted fs-6">{GetTimePast(post.createdAt)}</span>
                                         )}
                                     </div>
