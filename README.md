@@ -1,5 +1,5 @@
 ## Project Description
-# Yapper (V1)
+## Yapper (V1)
 - Template: React Typescript
 - Project Type: Social Media
 - Inspiration sources: Twitter, Facebook
@@ -12,7 +12,7 @@
 - Database: PostgreSQL
 
 ## Setup
-# Backend
+## Backend
 - Install BunJS
 - Change the `.env.example` to `.env` and fill the data
 - To get raw database schema, use `drizzle-kit`
@@ -22,7 +22,7 @@
 
 - Developer Note: Make sure to use an actual gmail username for email_user and [Google App Password](https://support.google.com/accounts/answer/185833?hl=en) for the email_pass
 
-# Frontend
+## Frontend
 - Open new terminal
 - Run `cd client`
 - Run `pnpm install`
@@ -44,7 +44,7 @@
 - [x] Sidebar
 - [x] Home Page
 - [x] Upload, Like and Delete posts (images are also supported)
-- [ ] Comment Post
+- [x] Comment Post (Currently only add, load, and delete)
 - [ ] Report Post
 - [x] Search Posts
 - [x] Viewing Profile + Functionalities including: Follow, User Posts, and Edit (for owners)

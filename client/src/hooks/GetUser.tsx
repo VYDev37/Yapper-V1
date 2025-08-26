@@ -1,6 +1,6 @@
 import { axios } from '../config';
 
-const GetUser = async () => {
+export default async function GetUser() {
     try {
         const response = await axios.get('user-data');
         if (response.status === 200) {
@@ -12,5 +12,3 @@ const GetUser = async () => {
         return null;
     }
 }
-
-export default GetUser;

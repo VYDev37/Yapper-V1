@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 import VerifiedIcon from '../../../../assets/verified-check.png';
 import { FormatNumber, GetTimePast } from "../../../../utilities/Format";
@@ -19,6 +19,7 @@ interface PostCardProps {
 
 export default function PostCard({ displayedPosts, isMain, actions, user, isSelf }: PostCardProps) {
     const navigate = useNavigate();
+    const location = useLocation();
 
     return (
         <div>
@@ -58,18 +59,9 @@ export default function PostCard({ displayedPosts, isMain, actions, user, isSelf
                                     {
                                         post.imageUrl && (
                                             (isMain || isSelf) ? (
-                                                <img
-                                                    src={`/public/${post.imageUrl}`}
-                                                    alt=""
-                                                    className="rounded-0"
-                                                    style={{
-                                                        marginLeft: 'calc(115px - 50px)',
-                                                        marginRight: 'calc(115px - 50px)',
-                                                        height: '350px',
-                                                        width: '350px',
-                                                        objectFit: 'cover'
-                                                    }}
-                                                />
+                                                <img src={`/public/${post.imageUrl}`} alt="" className="rounded-0"
+                                                    style={{ marginLeft: 'calc(115px - 50px)', marginRight: 'calc(115px - 50px)',
+                                                        height: '350px', width: '350px', objectFit: 'cover' }} />
                                             ) : (
                                                 <a href={`/public/${post.imageUrl}`}>🔗 An attachment</a>
                                             )
@@ -85,7 +77,9 @@ export default function PostCard({ displayedPosts, isMain, actions, user, isSelf
                                         </div>
                                         <div className="ms-3">
                                             <i className="fas fa-comment text-white"
-                                                style={{ WebkitTextStroke: '1px black' }}></i>
+                                                style={{ WebkitTextStroke: '1px black' }} onClick={() => navigate(`/post/${post.ownerId}/${post.postId}`, {
+                                                    state: { backgroundLocation: location }
+                                                })}></i>
                                             <span className="px-1">{FormatNumber(post.commentCount)}</span>
                                         </div>
                                         {user?.id !== post?.ownerId && (

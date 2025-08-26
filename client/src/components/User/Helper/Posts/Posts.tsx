@@ -4,11 +4,7 @@ import type { Post } from "../../../../context/PostContext";
 import { usePosts } from "../../../../context/PostContext";
 import { useUser } from "../../../../context/UserContext";
 
-import { axios } from "../../../../config";
-
-import SwalUtility from "../../../../utilities/SwalUtility";
 import Loading from "../../../Fallback/Loading";
-
 import PostCard from "./PostCard";
 
 interface PostArgs {
@@ -19,7 +15,7 @@ interface PostArgs {
 }
 
 export default function Posts({ search, username, isMain, isSelf }: PostArgs) {
-    const { posts, AddLike, FetchPost, loading } = usePosts();
+    const { posts, AddLike, FetchPost, DeleteItem, loading } = usePosts();
     const { user } = useUser();
 
     useEffect(() => {
@@ -32,21 +28,6 @@ export default function Posts({ search, username, isMain, isSelf }: PostArgs) {
 
     if (loading)
         return <Loading />;
-
-    const DeleteItem = async (postId: number) => {
-        const result = await SwalUtility.SendConfirmationDialog("Delete Post Confirmation", "Are you sure you want to delete this post?", "Delete");
-        if (result.isConfirmed) {
-            try {
-                const response = await axios.delete(`delete-post/${postId}`);
-                if (response.status === 200) {
-                    await SwalUtility.SendMessage("Success", response.data?.message);
-                    FetchPost();
-                }
-            } catch (error: any) {
-                await SwalUtility.SendMessage("Failed", error.response?.data?.message || error.message || "Something is wrong when trying to delete post.", "error");
-            }
-        }
-    }
 
     return (
         <div>

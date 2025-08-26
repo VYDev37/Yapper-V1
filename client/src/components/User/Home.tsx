@@ -11,7 +11,7 @@ import { useUser } from '../../context/UserContext';
 import { Posts } from './Helper/Posts';
 
 export default function Home() {
-    const { user, RefreshUser } = useUser();
+    const { user, RefreshUser, loading } = useUser();
 
     const [file, setFile] = React.useState<File | null>(null);
     const [description, setDescription] = React.useState<string>('');
@@ -63,6 +63,9 @@ export default function Home() {
         }
     }
 
+    if (loading || !user)
+        return <div>Loading...</div>
+
     return (
         <div className="container-fluid home-container h-100 px-0 min-vh-100" style={{ overflowY: 'auto' }}>
             <div className="row home-page d-flex w-100 text-left gx-3">
@@ -103,7 +106,7 @@ export default function Home() {
                         <h3 className="fs-5 fw-bold">Recent Posts</h3>
                     </div>
                     <div>
-                        <Posts username={user?.username} isMain={false} />
+                        <Posts username={user.username} isMain={false} />
                     </div>
                 </div>
             </div>

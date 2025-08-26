@@ -1,7 +1,7 @@
 import type { Context } from 'hono';
-import { and, eq, inArray, ilike } from 'drizzle-orm';
+import { and, eq, inArray, ilike, desc } from 'drizzle-orm';
 
-import { posts, users, postLikes } from '../database/schema';
+import { posts, users, postLikes, postComments } from '../database/schema';
 import db from '../database/pool';
 import HTTPStatus from '../utilities/HTTPStatus';
 
@@ -38,8 +38,7 @@ export default class PostController {
                 role_id: users.role_id,
                 verified: users.verified,
                 profileUrl: users.profileUrl
-            }).from(posts).leftJoin(users, eq(posts.ownerId, users.id))
-            .where(where);
+            }).from(posts).leftJoin(users, eq(posts.ownerId, users.id)).where(where);
 
             const isLiked = await db.select({ postId: postLikes.postId }).from(postLikes).where(
                 and(
@@ -48,8 +47,19 @@ export default class PostController {
                 ));
             likedPosts = isLiked.map(p => p.postId);
 
+            const comments = await db.select({ 
+                id: postComments.id, postId: postComments.postId, 
+                userId: postComments.userId, comment: postComments.comment, 
+                createdAt: postComments.createdAt, full_name: users.full_name, 
+                username: users.username, profileUrl: users.profileUrl,
+                verified: users.verified
+            }).from(postComments).leftJoin(users, eq(postComments.userId, users.id))
+            .where(inArray(postComments.postId, result.map(p => p.postId)))
+            .orderBy(desc(postComments.createdAt));
+
             const packedPosts = result.map(post => ({
                 ...post,
+                comments: comments.filter(c => c.postId === post.postId),
                 liked: likedPosts.includes(post.postId)
             }));
 
@@ -118,6 +128,57 @@ export default class PostController {
         }
     }
 
+    static async AddComment(c: Context) {
+        try {
+            const user = c.get('user');
+            const { comment, postId } = await c.req.json();
+
+            if (!user)
+                return c.json({ message: "Forbidden access." }, HTTPStatus.FORBIDDEN);
+
+            const post = await db.query.posts.findFirst({ where: eq(posts.id, +postId) });
+            if (!post)
+                return c.json({ message: "Post not found." }, HTTPStatus.NOT_FOUND);
+
+            await db.insert(postComments).values({ userId: +user.id, postId: post.id, comment });
+            await db.update(posts).set({ commentCount: (post.commentCount || 0) + 1 }).where(eq(posts.id, post.id));
+
+            return c.json({ message: "Comment added."}, HTTPStatus.OK);
+        } catch (err) {
+            console.error(err);
+            return c.json({ message: "Internal server error." }, HTTPStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    static async DeleteComment(c: Context) {
+        try {
+            const user = c.get("user");
+            const { commentId, postId } = c.req.param();
+
+            if (!user)
+                return c.json({ message: "Forbidden access." }, HTTPStatus.FORBIDDEN);
+
+            const post = await db.query.posts.findFirst({ where: eq(posts.id, +postId) });
+            if (!post)
+                return c.json({ message: "Post not found." }, HTTPStatus.NOT_FOUND);
+
+            const postComment = await db.query.postComments.findFirst({ where: and(eq(postComments.id, +commentId), eq(postComments.userId, +user.id), eq(postComments.postId, +postId)) });
+            if (!postComment)
+                return c.json({ message: "Comment not found." }, HTTPStatus.NOT_FOUND);
+
+            if (postComment.userId !== +user.id && user.role_id < 2 && post.ownerId !== +user.id)
+                return c.json({ message: "You are not allowed to do this." }, HTTPStatus.FORBIDDEN);
+
+            await db.delete(postComments).where(eq(postComments.id, postComment.id));
+            await db.update(posts).set({ commentCount: (post.commentCount || 0) - 1 }).where(eq(posts.id, post.id));
+
+            return c.json({ message: "Comment successfully deleted." }, HTTPStatus.OK);
+        } catch (error) {
+            console.log(error);
+            return c.json({ message: "The post is not exist or deleted." }, HTTPStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     static async DeletePost(c: Context) {
         try {
             const user = c.get("user");
@@ -135,10 +196,10 @@ export default class PostController {
 
             await db.delete(posts).where(eq(posts.id, post.id));
 
-            return c.json({ message: "Deleted posts." }, HTTPStatus.OK);
+            return c.json({ message: "Post successfully deleted." }, HTTPStatus.OK);
         } catch (error) {
             console.log(error);
-            return c.json({ message: "The post is not exist or deleted." }, HTTPStatus.INTERNAL_SERVER_ERROR);
+            return c.json({ message: "The post does not exist or deleted." }, HTTPStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

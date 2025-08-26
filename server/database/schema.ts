@@ -1,3 +1,4 @@
+import { like } from 'drizzle-orm';
 import { pgTable, text, integer, varchar, timestamp, boolean, smallint, bigint } from 'drizzle-orm/pg-core';
 
 export const users = pgTable("users", {
@@ -32,6 +33,32 @@ export const postLikes = pgTable('post_likes', {
   id: bigint('id', { mode: 'number' }).primaryKey().notNull().generatedAlwaysAsIdentity(),
   postId: bigint('post_id', { mode: 'number' }).notNull().references(() => posts.id, { onDelete: 'cascade' }),
   userId: bigint('user_id', { mode: 'number' }).notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow()
+});
+
+export const postComments = pgTable('post_comments', {
+  id: bigint('id', { mode: 'number' }).primaryKey().notNull().generatedAlwaysAsIdentity(),
+  postId: bigint('post_id', { mode: 'number' }).notNull().references(() => posts.id, { onDelete: 'cascade' }),
+  userId: bigint('user_id', { mode: 'number' }).notNull().references(() => users.id, { onDelete: 'cascade' }),
+  replyCount: integer('reply_count').default(0),
+  likeCount: integer('like_count').default(0),
+  comment: text('comment').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow()
+});
+
+export const postCommentLikes = pgTable('post_comment_likes', {
+  id: bigint('id', { mode: 'number' }).primaryKey().notNull().generatedAlwaysAsIdentity(),
+  postId: bigint('post_id', { mode: 'number' }).notNull().references(() => posts.id, { onDelete: 'cascade' }),
+  commentId: bigint('comment_id', { mode: 'number' }).notNull().references(() => postComments.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow()
+});
+
+export const postCommentReplies = pgTable('post_comment_replies', {
+  id: bigint('id', { mode: 'number' }).primaryKey().notNull().generatedAlwaysAsIdentity(),
+  postId: bigint('post_id', { mode: 'number' }).notNull().references(() => posts.id, { onDelete: 'cascade' }),
+  commentId: bigint('comment_id', { mode: 'number' }).notNull().references(() => postComments.id, { onDelete: 'cascade' }),
+  reply: text('reply').notNull(),
+  likeCount: integer('like_count').default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow()
 });
 

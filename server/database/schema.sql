@@ -58,6 +58,70 @@ CREATE TABLE IF NOT EXISTS "post_likes" (
 );
 
 -- =====================
+-- POST COMMENTS
+-- =====================
+
+CREATE TABLE IF NOT EXISTS "post_comments" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+	"post_id" bigint NOT NULL,
+	"user_id" bigint NOT NULL,
+	"comment" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now(),
+    CONSTRAINT "post_comments_post_id_posts_id_fk" 
+        FOREIGN KEY ("post_id") 
+        REFERENCES "public"."posts"("id") 
+        ON DELETE CASCADE ON UPDATE NO ACTION,
+    CONSTRAINT "post_comments_user_id_users_id_fk" 
+        FOREIGN KEY ("user_id") 
+        REFERENCES "public"."users"("id") 
+        ON DELETE CASCADE ON UPDATE NO ACTION,
+    CONSTRAINT "post_comments_unique" UNIQUE("post_id", "user_id")
+);
+
+-- =====================
+-- POST COMMENT LIKES
+-- =====================
+
+CREATE TABLE IF NOT EXISTS "post_comment_likes" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+	"post_id" bigint NOT NULL,
+	"comment_id" bigint NOT NULL,
+	"reply" text NOT NULL,
+	"like_count" integer DEFAULT 0,
+	"created_at" timestamp with time zone DEFAULT now(),
+    CONSTRAINT "post_comment_likes_post_id_posts_id_fk" 
+        FOREIGN KEY ("post_id") 
+        REFERENCES "public"."posts"("id") 
+        ON DELETE CASCADE ON UPDATE NO ACTION,
+    CONSTRAINT "post_comment_likes_comment_id_post_comments_id_fk" 
+        FOREIGN KEY ("comment_id") 
+        REFERENCES "public"."post_comments"("id") 
+        ON DELETE CASCADE ON UPDATE NO ACTION,
+    CONSTRAINT "post_comment_likes_unique" UNIQUE("post_id", "comment_id");
+);
+
+-- =====================
+-- POST COMMENT REPLIES
+-- =====================
+CREATE TABLE IF NOT EXISTS "post_comment_replies" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+	"post_id" bigint NOT NULL,
+	"comment_id" bigint NOT NULL,
+	"reply" text NOT NULL,
+	"like_count" integer DEFAULT 0,
+	"created_at" timestamp with time zone DEFAULT now(),
+    CONSTRAINT "post_comment_replies_post_id_posts_id_fk" 
+        FOREIGN KEY ("post_id") 
+        REFERENCES "public"."posts"("id") 
+        ON DELETE CASCADE ON UPDATE NO ACTION,
+    CONSTRAINT "post_comment_replies_comment_id_post_comments_id_fk" 
+        FOREIGN KEY ("comment_id") 
+        REFERENCES "public"."post_comments"("id") 
+        ON DELETE CASCADE ON UPDATE NO ACTION,
+    CONSTRAINT "post_comment_replies_unique" UNIQUE("post_id", "comment_id")
+);
+
+-- =====================
 -- FOLLOWING LOGS
 -- =====================
 CREATE TABLE IF NOT EXISTS "following_logs" (

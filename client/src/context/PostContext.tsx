@@ -1,7 +1,21 @@
 import React from "react";
 import { axios } from "../config";
 
+import SwalUtility from "../utilities/SwalUtility";
+
 import { GetPosts } from "../hooks";
+
+export interface PostComments {
+    id: number;
+    postId: number;
+    userId: number;
+    comment: string;
+    full_name: string;
+    username: string;
+    profileUrl: string;
+    verified: boolean;
+    createdAt: Date;
+}
 
 export interface Post {
     postId: number;
@@ -14,9 +28,10 @@ export interface Post {
     verified: boolean;
     role_id: number;
     createdAt: Date;
-    likeCount: number,
-    commentCount: number,
-    liked: boolean
+    likeCount: number;
+    commentCount: number;
+    liked: boolean;
+    comments?: PostComments[];
 };
 
 interface PostContextType {
@@ -25,6 +40,7 @@ interface PostContextType {
     setPosts: React.Dispatch<React.SetStateAction<Post[]>>;
     AddLike: (id: number) => Promise<void>;
     FetchPost: (search?: string, username?: string) => Promise<void>;
+    DeleteItem: (postId: number, fn?: () => void) => Promise<void>;
 };
 
 const PostContext = React.createContext<PostContextType | undefined>(undefined);
@@ -79,12 +95,30 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, []);
 
+    const DeleteItem = async (postId: number, fn?: () => void) => {
+        const result = await SwalUtility.SendConfirmationDialog("Delete Post Confirmation", "Are you sure you want to delete this post?", "Delete");
+        if (result.isConfirmed) {
+            try {
+                const response = await axios.delete(`delete-post/${postId}`);
+                if (response.status === 200) {
+                    await SwalUtility.SendMessage("Success", response.data?.message);
+                    FetchPost();
+                    
+                    if (fn)
+                        fn();
+                }
+            } catch (error: any) {
+                await SwalUtility.SendMessage("Failed", error.response?.data?.message || error.message || "Something is wrong when trying to delete post.", "error");
+            }
+        }
+    }
+
     React.useEffect(() => {
         FetchPost();
     }, []);
 
     const value: PostContextType = {
-        posts, setPosts, AddLike, loading, FetchPost
+        posts, setPosts, AddLike, loading, FetchPost, DeleteItem
     }
 
     return <PostContext.Provider value={value}>{children}</PostContext.Provider>
