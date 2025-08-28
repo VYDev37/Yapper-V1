@@ -2,7 +2,7 @@ export const FormatNumber = (n: number) => {
     return n.toLocaleString();
 }
 
-export const GetTimePast = (startDate: Date | string) => {
+export const GetTimePast = (startDate: Date | string, shortened: boolean = false) => {
     const begin = typeof startDate === 'string' ? new Date(startDate) : startDate;
     const now = new Date();
     const diffMs = now.getTime() - begin.getTime();
@@ -16,17 +16,19 @@ export const GetTimePast = (startDate: Date | string) => {
     const years = Math.floor(months / 12);
 
     if (years > 0)
-        return `${years} year${years > 1 ? 's' : ''} ago`;
+        return shortened ? `${years}y` : `${years} year${years > 1 ? 's' : ''} ago`;
     if (months > 0)
-        return `${months} month${months > 1 ? 's' : ''} ago`;
+        return shortened ? `${months}m` : `${months} month${months > 1 ? 's' : ''} ago`;
     if (weeks > 0)
-        return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
+        return shortened ? `${weeks}w` : `${weeks} week${weeks > 1 ? 's' : ''} ago`;
     if (days > 0)
-        return `${days} day${days > 1 ? 's' : ''} ago`;
+        return shortened ? `${days}d` : `${days} day${days > 1 ? 's' : ''} ago`;
     if (hours > 0)
-        return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+        return shortened ? `${hours}h` : `${hours} hour${hours > 1 ? 's' : ''} ago`;
     if (minutes > 0)
-        return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+        return shortened ? `${minutes}m` : `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    if (seconds > 0)
+        return shortened ? `${seconds}s` : `${seconds} second${seconds > 1 ? 's' : ''} ago`;
     
     return 'just now';
 }

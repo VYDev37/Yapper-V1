@@ -1,7 +1,7 @@
 import type { Context } from 'hono';
-import { and, eq, inArray, ilike, desc } from 'drizzle-orm';
+import { and, eq, inArray, ilike, desc, sql } from 'drizzle-orm';
 
-import { posts, users, postLikes, postComments } from '../database/schema';
+import { posts, users, postLikes, postComments, postCommentLikes } from '../database/schema';
 import db from '../database/pool';
 import HTTPStatus from '../utilities/HTTPStatus';
 
@@ -24,6 +24,7 @@ export default class PostController {
                 where = ilike(posts.description, `%${search}%`);
 
             let likedPosts: number[] = [];
+            let likedComments: number[] = [];
 
             const result = await db.select({
                 postId: posts.id,
@@ -47,19 +48,37 @@ export default class PostController {
                 ));
             likedPosts = isLiked.map(p => p.postId);
 
-            const comments = await db.select({ 
-                id: postComments.id, postId: postComments.postId, 
-                userId: postComments.userId, comment: postComments.comment, 
-                createdAt: postComments.createdAt, full_name: users.full_name, 
-                username: users.username, profileUrl: users.profileUrl,
-                verified: users.verified
+            const comments = await db.select({
+                id: postComments.id, postId: postComments.postId,
+                userId: postComments.userId, parentId: postComments.parentId,
+                comment: postComments.comment, createdAt: postComments.createdAt,
+                likeCount: postComments.likeCount, replyCount: postComments.replyCount,
+                full_name: users.full_name, username: users.username,
+                profileUrl: users.profileUrl, verified: users.verified,
+                role_id: users.role_id
             }).from(postComments).leftJoin(users, eq(postComments.userId, users.id))
-            .where(inArray(postComments.postId, result.map(p => p.postId)))
-            .orderBy(desc(postComments.createdAt));
+                .where(inArray(postComments.postId, result.map(p => p.postId)))
+                .orderBy(desc(postComments.createdAt));
+
+            const commentLiked = await db.select({ commentId: postCommentLikes.commentId }).from(postCommentLikes).where(
+                and(inArray(postCommentLikes.commentId, comments.map(c => c.id)), eq(postCommentLikes.userId, +user.id)));
+
+            likedComments = commentLiked.map(c => c.commentId);
+
+            const repliesMap: Record<number, any[]> = {};
+            for (const c of comments) {
+                if (c.parentId) {
+                    if (!repliesMap[c.parentId]) 
+                        repliesMap[c.parentId] = [];
+
+                    repliesMap[c.parentId].push({ ...c, liked: likedComments.includes(c.id) });
+                }
+            }
 
             const packedPosts = result.map(post => ({
                 ...post,
-                comments: comments.filter(c => c.postId === post.postId),
+                comments: comments.filter(c => c.postId === post.postId && !c.parentId)
+                    .map(c => ({ ...c, liked: likedComments.includes(c.id), replies: repliesMap[c.id] })),
                 liked: likedPosts.includes(post.postId)
             }));
 
@@ -128,10 +147,49 @@ export default class PostController {
         }
     }
 
+    static async LikeComment(c: Context) {
+        try {
+            const { postId, commentId } = await c.req.json();
+            const user = c.get('user');
+
+            if (!user)
+                return c.json({ message: "Forbidden access." }, HTTPStatus.FORBIDDEN);
+
+            const postRef = await db.query.posts.findFirst({ where: eq(posts.id, +postId) });
+
+            if (!postRef)
+                return c.json({ message: "Post doesn't exist." }, HTTPStatus.NOT_FOUND);
+
+            const where = and(eq(postCommentLikes.postId, postRef.id), eq(postCommentLikes.commentId, commentId));
+
+            const findPostLike = await db.query.postCommentLikes.findFirst({ where });
+            const commentRef = await db.query.postComments.findFirst({ where: and(eq(postComments.id, +commentId), eq(postComments.postId, postRef.id)) });
+            if (!commentRef)
+                return c.json({ message: "Comment doesn't exist." }, HTTPStatus.NOT_FOUND);
+
+            const liked: boolean = !findPostLike;
+            const likeCount: number = (commentRef.likeCount || 0) + (liked ? 1 : -1);
+
+            await db.update(postComments).set({ likeCount }).where(eq(postComments.id, commentRef.id));
+
+            if (liked)
+                await db.insert(postCommentLikes).values({ postId: postRef.id, commentId: commentRef.id, userId: +user.id });
+            else
+                await db.delete(postCommentLikes).where(where);
+
+            return c.json({ message: liked ? "Like added." : "Like removed.", commentData: { likeCount, liked } }, HTTPStatus.OK);
+        } catch (err) {
+            console.error(err);
+            return c.json({ message: "" }, HTTPStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     static async AddComment(c: Context) {
         try {
             const user = c.get('user');
-            const { comment, postId } = await c.req.json();
+            const { comment, postId, parentId } = await c.req.json();
+
+            let parId = parentId ? +parentId : null;
 
             if (!user)
                 return c.json({ message: "Forbidden access." }, HTTPStatus.FORBIDDEN);
@@ -140,10 +198,19 @@ export default class PostController {
             if (!post)
                 return c.json({ message: "Post not found." }, HTTPStatus.NOT_FOUND);
 
-            await db.insert(postComments).values({ userId: +user.id, postId: post.id, comment });
-            await db.update(posts).set({ commentCount: (post.commentCount || 0) + 1 }).where(eq(posts.id, post.id));
+            if (parId) {
+                const comment = await db.query.postComments.findFirst({ where: eq(postComments.id, parId) });
+                if (!comment)
+                    return c.json({ message: "Comment not found." }, HTTPStatus.NOT_FOUND);
 
-            return c.json({ message: "Comment added."}, HTTPStatus.OK);
+                parId = comment.parentId ?? comment.id;
+                await db.update(postComments).set({ replyCount: sql`${postComments.replyCount} + 1` }).where(eq(postComments.id, parId));
+            }
+
+            await db.insert(postComments).values({ userId: +user.id, postId: post.id, comment, parentId: parId });
+            await db.update(posts).set({ commentCount: sql`${posts.commentCount} + 1` }).where(eq(posts.id, post.id));
+
+            return c.json({ message: "Comment added." }, HTTPStatus.OK);
         } catch (err) {
             console.error(err);
             return c.json({ message: "Internal server error." }, HTTPStatus.INTERNAL_SERVER_ERROR);
@@ -168,6 +235,15 @@ export default class PostController {
 
             if (postComment.userId !== +user.id && user.role_id < 2 && post.ownerId !== +user.id)
                 return c.json({ message: "You are not allowed to do this." }, HTTPStatus.FORBIDDEN);
+
+            const parentId: number = postComment.parentId!;
+            if (parentId) {
+                const comment = await db.query.postComments.findFirst({ where: eq(postComments.id, parentId) });
+                if (!comment)
+                    return c.json({ message: "Comment not found." }, HTTPStatus.NOT_FOUND);
+
+                await db.update(postComments).set({ replyCount: (comment.replyCount || 0) - 1 }).where(eq(postComments.id, parentId));
+            }
 
             await db.delete(postComments).where(eq(postComments.id, postComment.id));
             await db.update(posts).set({ commentCount: (post.commentCount || 0) - 1 }).where(eq(posts.id, post.id));

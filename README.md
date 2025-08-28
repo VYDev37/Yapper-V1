@@ -44,7 +44,7 @@
 - [x] Sidebar
 - [x] Home Page
 - [x] Upload, Like and Delete posts (images are also supported)
-- [x] Comment Post (Currently only add, load, and delete)
+- [x] Comment Post (Add, load, reply, like, like reply, and delete)
 - [ ] Report Post
 - [x] Search Posts
 - [x] Viewing Profile + Functionalities including: Follow, User Posts, and Edit (for owners)
