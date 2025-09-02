@@ -50,12 +50,17 @@ export default function Comments({ comment, HandleReply, postOwner, user, LikeCo
     }
 
     return (
-        <div className="d-flex align-items-start py-2 flex-shrink">
+        <div className="d-flex align-items-start py-2 flex-shrink" id={`${comment.id}`}>
             <img src={`/public/profile-pics/${comment.profileUrl}`} role="button" onClick={() => navigate(`/profile/${comment.username}`)} alt="profile" className="rounded-circle me-3" width="40" height="40" />
             <div className="flex-grow-1">
                 <div className="mb-1 text-break text-wrap">
                     <div className="d-flex align-items-center">
-                        <strong style={{ color: user.role_id >= 2 ? "goldenrod" : "inherit" }} role="button" onClick={() => navigate(`/profile/${comment.username}`)}>{comment.username}</strong>
+                        <strong style={{ color: comment.role_id >= 2 ? "goldenrod" : "inherit" }} role="button" onClick={() => navigate(`/profile/${comment.username}`)}>{comment.username}
+                            {comment.userId === postOwner && (
+                                <span className="text-muted" style={{ fontSize: '14px', fontWeight: 'normal' }}> • Creator</span>
+                            )}
+                        </strong>
+
                         {comment.verified && (<img src={VerifiedIcon} alt="" className="rounded-circle ms-1" style={{ height: '20px', marginTop: '3px' }} />)}
                     </div>
                     {comment.comment}
@@ -68,7 +73,7 @@ export default function Comments({ comment, HandleReply, postOwner, user, LikeCo
                         <a role="button" onClick={(e) => RemoveComment(e, comment.id, comment.postId)} className="text-decoration-none text-danger">Delete</a>
                     )}
                 </div>
-                {comment.replyCount > 0 && (<button className="btn btn-link btn-sm text-muted ps-0 mt-2"
+                {comment.replyCount > 0 && (<button className="btn btn-link btn-sm text-muted ps-0 mt-2 text-decoration-none"
                     data-bs-toggle="collapse" data-bs-target="#replies-1"
                     aria-expanded="false" aria-controls="replies-1" onClick={() => setOpened(!opened)}>
                     {opened ? "Hide replies" : `View replies (${FormatNumber(comment.replyCount)})`}
@@ -82,14 +87,18 @@ export default function Comments({ comment, HandleReply, postOwner, user, LikeCo
                                 <div className="flex-grow-1">
                                     <div className="mb-1 text-break text-wrap">
                                         <div className="d-flex align-items-center">
-                                            <strong style={{ color: r.role_id >= 2 ? "goldenrod" : "inherit" }} role="button" onClick={() => navigate(`/profile/${comment.username}`)}>{comment.username}</strong>
+                                            <strong style={{ color: r.role_id >= 2 ? "goldenrod" : "inherit" }} role="button" onClick={() => navigate(`/profile/${r.username}`)}>{r.username}
+                                                {r.userId === postOwner && (
+                                                    <span className="text-muted" style={{ fontSize: '14px', fontWeight: 'normal' }}> • Creator</span>
+                                                )}
+                                            </strong>
                                             {r.verified && (<img src={VerifiedIcon} alt="" className="rounded-circle ms-1" style={{ height: '20px', marginTop: '3px' }} />)}
                                         </div>
                                         {r.comment}
                                     </div>
                                     <div className="d-flex gap-3 text-muted small">
                                         <span>{GetTimePast(r.createdAt, true)}</span>
-                                        <button type="button" className="btn btn-link btn-sm text-muted p-0" onClick={() => HandleReply(r.username, r.id)}>
+                                        <button type="button" className="btn btn-link btn-sm text-muted p-0 text-decoration-none" onClick={() => HandleReply(r.username, r.id)}>
                                             Reply
                                         </button>
                                         {(user.id === r.userId || user.role_id >= 2 || user.id === postOwner) && (
@@ -109,7 +118,7 @@ export default function Comments({ comment, HandleReply, postOwner, user, LikeCo
                     </div>
                 )}
             </div>
-            <button className="btn btn-sm p-0 ms-2 border-0 bg-transparent text-muted">
+            <button className="btn btn-sm p-0 me-3 border-0 bg-transparent text-muted">
                 <div className="d-flex flex-column">
                     <i className={`fas fa-heart text-${comment.liked ? "danger" : "white"} mb-1`}
                         style={{ WebkitTextStroke: comment.liked ? '' : '1px black' }} onClick={() => LikeComment(comment.postId, comment.id, false)}></i>

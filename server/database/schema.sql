@@ -139,3 +139,37 @@ CREATE TABLE IF NOT EXISTS "server_token" (
         REFERENCES "users"("id")
         ON DELETE CASCADE ON UPDATE NO ACTION
 );
+
+-- =====================
+-- NOTIFICATIONS
+-- =====================
+CREATE TABLE IF NOT EXISTS "notifications" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "notifications_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
+	"recipient_id" bigint NOT NULL,
+	"sender_id" bigint NOT NULL,
+	"post_id" bigint DEFAULT 0,
+    "is_read" boolean NOT NULL DEFAULT false,
+    "dev_only" boolean NOT NULL DEFAULT false,
+	"comment_id" bigint DEFAULT 0,
+	"action" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now(),
+    CONSTRAINT "notifications_recipient_id_users_id_fk" 
+        FOREIGN KEY ("recipient_id") 
+        REFERENCES "public"."users"("id") 
+        ON DELETE CASCADE ON UPDATE NO ACTION,
+    CONSTRAINT "notifications_sender_id_users_id_fk" 
+        FOREIGN KEY ("sender_id") 
+        REFERENCES "public"."users"("id") 
+        ON DELETE CASCADE ON UPDATE NO ACTION,
+    CONSTRAINT "notifications_post_id_posts_id_fk" 
+        FOREIGN KEY ("post_id") 
+        REFERENCES "public"."posts"("id") 
+        ON DELETE CASCADE ON UPDATE NO ACTION,
+    CONSTRAINT "notifications_comment_id_post_comments_id_fk" 
+        FOREIGN KEY ("comment_id") 
+        REFERENCES "public"."post_comments"("id") 
+        ON DELETE CASCADE ON UPDATE NO ACTION
+);
+
+INSERT INTO public.users (id, full_name, username, email, verified, email_verified, "password", password_length, profile_url, role_id, followers, "following", created_at, updated_at, security_code)
+VALUES(0, 'system', 'system', 'system@gmail.com', false, false, '$argon2id$v=19$m=65536,t=3,p=4$aqV6gLZKSYp8B/GI0prVkA$9AwQyhFzzowrhiXggAFVYKfsXSTb1tB6aFv3PiMwcAQ', 6, 'profile-icon-default.png', 0, 0, 0, '2025-09-02 15:09:10.872', '2025-09-02 15:09:10.872', NULL);

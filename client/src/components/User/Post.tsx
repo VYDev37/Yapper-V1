@@ -15,7 +15,7 @@ import Comments from "./Helper/Posts/Comments";
 
 export default function Post({ modal = false }) {
     const { ownerId, id } = useParams();
-    const { AddLike, DeleteItem, loading, posts, FetchPost, LikeComment } = usePosts();
+    const { AddLike, DeleteItem, FetchPost, LikeComment, ReportPost, loading, posts } = usePosts();
     const { user } = useUser();
 
     const navigate = useNavigate();
@@ -49,7 +49,7 @@ export default function Post({ modal = false }) {
             }
             const result = await axios.post("add-comment", { comment, postId, parentId });
             if (result.status === 200) {
-                SwalUtility.SendMessage("Success", result.data.message, "success");
+                //SwalUtility.SendMessage("Success", result.data.message, "success");
                 setParentId(null);
                 setComment('');
                 FetchPost();
@@ -132,7 +132,7 @@ export default function Post({ modal = false }) {
                             </div>
                             {user.id !== post.ownerId && (
                                 <div className="ms-3">
-                                    <i className="fas fa-triangle-exclamation"></i>
+                                    <i className="fas fa-triangle-exclamation" onClick={() => ReportPost(post.postId)}></i>
                                     <span className="px-1">Report</span>
                                 </div>
                             )}
@@ -163,7 +163,7 @@ export default function Post({ modal = false }) {
 
                             if (val.trim() === '')
                                 setParentId(null);
-                        }} className="form-control p-2" style={{ width: '600px' }} required />
+                        }} className="form-control p-2" style={{ width: modal ? '600px' : '1000px' }} required />
                     <button className="btn btn-yapper round-30 ms-3 px-3" style={{ width: '100px', height: '40px' }} onClick={(e) => AddComment(e, post.postId)}>Comment</button>
                 </form>
             </div>

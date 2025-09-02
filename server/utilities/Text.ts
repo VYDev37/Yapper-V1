@@ -12,3 +12,7 @@ export const OnlyNumbers = (text: string): boolean => {
     const pattern = /^\d+$/;
     return pattern.test(text);
 }
+
+export const Truncate = (str: string, max: number) => {
+    return str.length > max ? str.substring(0, max) + "..." : str;
+}

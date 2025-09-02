@@ -30,4 +30,7 @@ UserRouter.post('/send-otp-mail/:type', Authorization, UserController.SendVerifi
 UserRouter.post('/send-reset-password', UserController.SendResetPassword);
 UserRouter.post('/reset-password/:id/:token', UserController.ResetPassword);
 
+// Notifications
+UserRouter.get('get-notifications', Authorization, UserController.GetNotifications);
+
 export default UserRouter;

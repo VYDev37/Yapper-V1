@@ -45,9 +45,9 @@
 - [x] Home Page
 - [x] Upload, Like and Delete posts (images are also supported)
 - [x] Comment Post (Add, load, reply, like, like reply, and delete)
-- [ ] Report Post
+- [x] Report Post
 - [x] Search Posts
 - [x] Viewing Profile + Functionalities including: Follow, User Posts, and Edit (for owners)
-- [ ] Notifications Page
+- [x] Notifications Page
 - [ ] Messages Page
 - [x] Settings Page

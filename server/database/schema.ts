@@ -62,6 +62,18 @@ export const followingLogs = pgTable('following_logs', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow()
 });
 
+export const notifications = pgTable('notifications', {
+  id: bigint('id', { mode: 'number' }).primaryKey().notNull().generatedAlwaysAsIdentity(),
+  recipientId: bigint('recipient_id', { mode: 'number' }).notNull().references(() => users.id, { onDelete: 'cascade' }),
+  senderId: bigint('sender_id', { mode: 'number' }).notNull().references(() => users.id, { onDelete: 'cascade' }),
+  postId: bigint('post_id', { mode: 'number' }).references(() => posts.id, { onDelete: 'cascade' }),
+  commentId: bigint('comment_id', { mode: 'number' }).references(() => postComments.id, { onDelete: 'cascade' }),
+  action: text('action').notNull(),
+  isRead: boolean('is_read').notNull().default(false),
+  devOnly: boolean('dev_only').notNull().default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow()
+});
+
 export const serverToken = pgTable('server_token', {
   id: bigint('id', { mode: 'number' }).primaryKey().notNull().generatedAlwaysAsIdentity(),
   userId: bigint('user_id', { mode: 'number' }).notNull().references(() => users.id, { onDelete: 'cascade' }),

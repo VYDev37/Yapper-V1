@@ -1,8 +1,10 @@
 import type { Context } from 'hono';
 import { and, eq, inArray, ilike, desc, sql } from 'drizzle-orm';
 
-import { posts, users, postLikes, postComments, postCommentLikes } from '../database/schema';
+import { posts, postLikes, postComments, postCommentLikes, users, notifications } from '../database/schema';
 import db from '../database/pool';
+
+import { Truncate } from '../utilities/Text';
 import HTTPStatus from '../utilities/HTTPStatus';
 
 export default class PostController {
@@ -68,7 +70,7 @@ export default class PostController {
             const repliesMap: Record<number, any[]> = {};
             for (const c of comments) {
                 if (c.parentId) {
-                    if (!repliesMap[c.parentId]) 
+                    if (!repliesMap[c.parentId])
                         repliesMap[c.parentId] = [];
 
                     repliesMap[c.parentId].push({ ...c, liked: likedComments.includes(c.id) });
@@ -110,6 +112,30 @@ export default class PostController {
         }
     }
 
+    static async ReportPost(c: Context) {
+        const user = c.get("user");
+        const { postId, reason } = await c.req.json();
+
+        if (!user)
+            return c.json({ message: "Forbidden." }, HTTPStatus.FORBIDDEN);
+
+        const post = await db.query.posts.findFirst({ where: eq(posts.id, +postId) });
+        if (!post)
+            return c.json({ message: "Post not found" }, HTTPStatus.NOT_FOUND);
+
+        await db.insert(notifications).values({
+            recipientId: 0,
+            senderId: +user.id,
+            action: `reported a post (Reason: ${Truncate(reason, 50)}).`,
+            postId: post.id,
+            isRead: false,
+            devOnly: true
+        });
+
+        return c.json({ message: "Report submitted." }, HTTPStatus.OK);
+    }
+
+
     static async AddLike(c: Context) {
         try {
             const post_id: number = +c.req.param('id');
@@ -123,22 +149,23 @@ export default class PostController {
             if (!postRef)
                 return c.json({ message: "Post doesn't exist." }, HTTPStatus.NOT_FOUND);
 
-            const where = and(
-                eq(postLikes.postId, post_id),
-                eq(postLikes.userId, user.id)
-            );
+            const where = and(eq(postLikes.postId, postRef.id), eq(postLikes.userId, user.id));
 
             const findPostLike = await db.query.postLikes.findFirst({ where });
 
             const liked: boolean = !findPostLike;
             const likeCount: number = (postRef.likeCount || 0) + (liked ? 1 : -1);
 
-            await db.update(posts).set({ likeCount }).where(eq(posts.id, post_id));
+            await db.update(posts).set({ likeCount }).where(eq(posts.id, postRef.id));
 
-            if (liked)
+            if (liked) {
                 await db.insert(postLikes).values({ postId: post_id, userId: +user.id });
-            else
+                if (postRef.ownerId !== +user.id)
+                    await db.insert(notifications).values({ recipientId: postRef.ownerId!, senderId: +user.id, action: "liked your post.", postId: postRef.id });
+            }
+            else {
                 await db.delete(postLikes).where(where);
+            }
 
             return c.json({ message: liked ? "Like added." : "Like removed.", postData: { likeCount, liked } }, HTTPStatus.OK);
         } catch (err) {
@@ -172,10 +199,14 @@ export default class PostController {
 
             await db.update(postComments).set({ likeCount }).where(eq(postComments.id, commentRef.id));
 
-            if (liked)
+            if (liked) {
                 await db.insert(postCommentLikes).values({ postId: postRef.id, commentId: commentRef.id, userId: +user.id });
-            else
+                if (commentRef.userId !== +user.id)
+                    await db.insert(notifications).values({ recipientId: commentRef.userId!, senderId: +user.id, action: "liked your comment.", postId: postRef.id, commentId: commentRef.id });
+            }
+            else {
                 await db.delete(postCommentLikes).where(where);
+            }
 
             return c.json({ message: liked ? "Like added." : "Like removed.", commentData: { likeCount, liked } }, HTTPStatus.OK);
         } catch (err) {
@@ -204,7 +235,12 @@ export default class PostController {
                     return c.json({ message: "Comment not found." }, HTTPStatus.NOT_FOUND);
 
                 parId = comment.parentId ?? comment.id;
+                if (comment.userId !== +user.id)
+                    await db.insert(notifications).values({ recipientId: comment.userId!, senderId: +user.id, action: "replied your comment.", postId: post.id, commentId: parId });
+
                 await db.update(postComments).set({ replyCount: sql`${postComments.replyCount} + 1` }).where(eq(postComments.id, parId));
+            } else {
+                await db.insert(notifications).values({ recipientId: post.ownerId!, senderId: +user.id, action: "commented on your post.", postId: post.id, commentId: parId });
             }
 
             await db.insert(postComments).values({ userId: +user.id, postId: post.id, comment, parentId: parId });

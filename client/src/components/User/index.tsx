@@ -1,6 +1,7 @@
 import { Route, Outlet, Navigate } from 'react-router-dom';
 
 import Home from './Home';
+import Notification from './Notification';
 import Post from './Post';
 import Profile from './Profile';
 import SearchPage from './Search';
@@ -41,6 +42,7 @@ export default function UserRoutes() {
                <UserLayout /> 
             </Protection>}>
             <Route path="home" index element={<Home />} />
+            <Route path="notification" index element={<Notification />} />
             <Route path="post/:ownerId/:id" index element={<Post />} />
             <Route path="profile" element={<Navigate to={`/profile/${user?.username}`} />} />
             <Route path="profile/:username" element={<Profile />} >

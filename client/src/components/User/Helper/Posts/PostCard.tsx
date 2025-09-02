@@ -10,8 +10,9 @@ interface PostCardProps {
     displayedPosts: Post[];
     isMain: boolean;
     actions: {
-        DeleteItem: (postId: number) => Promise<void>;
         AddLike: (id: number) => Promise<void>;
+        DeleteItem: (postId: number) => Promise<void>;
+        ReportPost: (postId: number) => Promise<void>;
     }
     user: User;
     isSelf: boolean;
@@ -83,7 +84,7 @@ export default function PostCard({ displayedPosts, isMain, actions, user, isSelf
                                             <span className="px-1">{FormatNumber(post.commentCount)}</span>
                                         </div>
                                         {user?.id !== post?.ownerId && (
-                                            <div className="ms-3">
+                                            <div className="ms-3" onClick={() => actions.ReportPost(post?.postId)}>
                                                 <i className="fas fa-triangle-exclamation"></i>
                                                 <span className="px-1">Report</span>
                                             </div>

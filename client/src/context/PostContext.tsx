@@ -41,12 +41,13 @@ export interface Post {
 };
 
 interface PostContextType {
-    posts: Post[],
-    loading: boolean,
+    posts: Post[];
+    loading: boolean;
     setPosts: React.Dispatch<React.SetStateAction<Post[]>>;
     AddLike: (id: number) => Promise<void>;
     LikeComment: (postId: number, commentId: number, isReply: boolean) => Promise<void>;
     FetchPost: (search?: string, username?: string) => Promise<void>;
+    ReportPost: (postId: number) => Promise<void>;
     DeleteItem: (postId: number, fn?: () => void) => Promise<void>;
 };
 
@@ -68,6 +69,17 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setLoading(false);
         }
     }, []);
+
+    const ReportPost = async (postId: number) => {
+        try {
+            const result = await SwalUtility.SendInputDialog("Report Post", "Please input the reason for your report.", "text", "OK");
+            const res = await axios.post('/add-report', { postId, reason: result.value });
+            if (res.status === 200) 
+                SwalUtility.SendMessage("Success", res.data.message, "success");
+        } catch (err: any) {
+            SwalUtility.SendMessage("Failed", err.message, "error");
+        }
+    }
 
     const LikeComment = async (postId: number, commentId: number, isReply: boolean) => {
         setPosts(prev => prev.map(p => p.postId === postId ? {
@@ -222,7 +234,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, []);
 
     const value: PostContextType = {
-        posts, setPosts, AddLike, loading, FetchPost, DeleteItem, LikeComment
+        posts, setPosts, AddLike, loading, FetchPost, DeleteItem, LikeComment, ReportPost
     }
 
     return <PostContext.Provider value={value}>{children}</PostContext.Provider>

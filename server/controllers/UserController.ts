@@ -5,7 +5,7 @@ import type { Context } from 'hono';
 import { deleteCookie, getCookie } from 'hono/cookie';
 
 import { eq, and, sql, gt, or } from 'drizzle-orm';
-import { users, followingLogs } from '../database/schema';
+import { users, followingLogs, notifications, postComments, posts, serverToken } from '../database/schema';
 
 import { IsImage, FileExist } from '../utilities/FileReader';
 import { OnProfileChange, OnUsernameChange, OnNameChange, OnEmailChange, OnPasswordChange, OnEnableSecurity } from './helpers/user';
@@ -14,7 +14,6 @@ import HTTPStatus from '../utilities/HTTPStatus';
 import SendMail from '../utilities/MailSender';
 
 import db from '../database/pool';
-import { serverToken } from '../database/schema';
 
 import GetToken from '../middlewares/GetToken';
 
@@ -182,10 +181,13 @@ export default class UserController {
             await db.update(users).set({ followers }).where(eq(users.id, targetDB.id)); // update target's follower count 
             await db.update(users).set({ following }).where(eq(users.id, userDB.id)); // update follower's following count
 
-            if (followed)
+            if (followed) {
                 await db.insert(followingLogs).values({ followedId: targetDB.id, userId: userDB.id });
-            else
+                await db.insert(notifications).values({ recipientId: targetDB.id, senderId: userDB.id, action: "followed your account." });
+            }
+            else {
                 await db.delete(followingLogs).where(where);
+            }
 
             return c.json({ message: followed ? "Follow added." : "Follow removed.", postData: { followers, following, followed } }, HTTPStatus.OK);
         } catch (err) {
@@ -260,7 +262,8 @@ export default class UserController {
                 token: `${token}|forget_password`,
                 expiresAt: new Date(Date.now() + 1 * 5 * 60 * 1000)
             });
-            await SendMail({ targetMail: userRecord.email, subject: 'Reset Password', content: `
+            await SendMail({
+                targetMail: userRecord.email, subject: 'Reset Password', content: `
                 Hello ${userRecord.username}, we've received your request for password reset.
                 Please click this link to reset your password:\n
                 http://localhost:5173/reset-password/${userRecord.id}/${token}
@@ -297,6 +300,45 @@ export default class UserController {
         } catch (err) {
             console.error(err);
             return c.json({ message: 'Internal server error.' }, HTTPStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    static async GetNotifications(c: Context) {
+        try {
+            const user = c.get("user");
+            if (!user)
+                return c.json({ message: "Forbidden." }, HTTPStatus.FORBIDDEN);
+
+            let where;
+
+            if (user.role_id >= 2)
+                where = or(eq(notifications.recipientId, +user.id), eq(notifications.devOnly, true));
+            else
+                where = and(eq(notifications.recipientId, +user.id), eq(notifications.devOnly, false));
+
+            const result = await db.select({
+                id: notifications.id,
+                action: notifications.action,
+                createdAt: notifications.createdAt,
+                postId: notifications.postId,
+                commentId: notifications.commentId,
+                isRead: notifications.isRead,
+                postAttachment: posts.imageUrl,
+                postDescription: posts.description,
+                postOwner: posts.ownerId,
+                username: users.username,
+                verified: users.verified,
+                profileUrl: users.profileUrl
+            }).from(notifications)
+                .leftJoin(users, eq(notifications.senderId, users.id))
+                .leftJoin(posts, eq(notifications.postId, posts.id))
+                .leftJoin(postComments, eq(notifications.commentId, postComments.id))
+                .where(where)
+
+            return c.json({ notifications: result }, HTTPStatus.OK);
+        } catch (err) {
+            console.log(err);
+            return c.json({ message: "Internal server error." }, HTTPStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

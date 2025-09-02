@@ -37,3 +37,7 @@ export const FormatDate = (date: Date | string) => {
     const verifiedDate = typeof date === 'string' ? new Date(date) : date;
     return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).format(verifiedDate);
 }
+
+export const Truncate = (str: string, max: number) => {
+    return str.length > max ? str.substring(0, max) + "..." : str;
+}

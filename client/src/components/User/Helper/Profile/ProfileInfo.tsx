@@ -50,6 +50,12 @@ export function ProfileInfo() {
                     <p className="fw-bold fs-5 mb-1">Member since</p>
                     <p className="fs-5">{FormatDate(profile?.createdAt!)}</p>
                 </div>
+                {flags.hasAccess && (
+                    <div className="d-flex flex-column mb-3">
+                        <p className="fw-bold fs-5 mb-1">User ID</p>
+                        <p className="fs-5">{profile.id}</p>
+                    </div>
+                )}
             </div>
             <div className="col-6">
                 <div className="d-flex flex-column mb-3">

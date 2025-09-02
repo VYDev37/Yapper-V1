@@ -15,7 +15,7 @@ interface PostArgs {
 }
 
 export default function Posts({ search, username, isMain, isSelf }: PostArgs) {
-    const { posts, AddLike, FetchPost, DeleteItem, loading } = usePosts();
+    const { posts, AddLike, FetchPost, DeleteItem, ReportPost, loading } = usePosts();
     const { user } = useUser();
 
     useEffect(() => {
@@ -32,7 +32,7 @@ export default function Posts({ search, username, isMain, isSelf }: PostArgs) {
     return (
         <div>
             <PostCard displayedPosts={displayedPosts} user={user!}
-                actions={{ DeleteItem, AddLike }} isMain={isMain!} isSelf={isSelf!} />
+                actions={{ DeleteItem, AddLike, ReportPost }} isMain={isMain!} isSelf={isSelf!} />
         </div>
     )
 }
