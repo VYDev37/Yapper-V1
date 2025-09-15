@@ -4,7 +4,7 @@
 - Project Type: Social Media
 - Inspiration sources: Twitter, Facebook
 - Frontend External Dependencies: Bootstrap, FontAwesome, Sweetalert2, React (+ included packages), Vite (+ included packages), Axios
-- Backend External Dependencies: Typescript, Hono, pg, Drizzle, argon2, jsonwebtoken, nodemailer (not used for now)
+- Backend External Dependencies: Typescript, Hono, pg, Drizzle, argon2, jsonwebtoken, nodemailer
 - Developer Note: V2 will be rewritten in Tailwind CSS and for the android version, it might be written in V2 along with React Native usage
 - Production Ready: No
 - Package Manager: PNPM
