@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 
 import AccountRoutes from "./Account";
+import AdminRoutes from './Admin';
 import UserRoutes from "./User";
 import FallbackRoutes from "./Fallback";
 import AutoRedirect from "./Fallback/Redirect";
@@ -24,6 +25,7 @@ function CompoundRoutes() {
         <Route path="/" element={<AutoRedirect />} />
         <Route path="/post/:ownerId/:id" element={<Post modal={false} />} />
         {AccountRoutes()}
+        {AdminRoutes()}
         {UserRoutes()}
         {FallbackRoutes()}
       </Routes>

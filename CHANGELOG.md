@@ -26,8 +26,25 @@
 - Like on replies
 
 ## [0.5.0]
+### Added
 - Optimized UI for Post View
 - Report Button
 - Added `Creator` tag for the post owner in their post (can be seen in comment column)
 - Notifications Page
 - Notification sender when follow user, comment, like comment, reply, and like post
+
+## [1.0.0]
+- Report comment & replies
+- Audit Log Page (separated from notifications for moderator)
+- Moved log out button from sidebar to settings
+- Fixed bug related to user profile viewing (now, the full_name and username visual don't go invisible anymore after changes)
+- Refactored the `Report` and `Notification` code
+- Block User & Effect (Post can't be seen) & Functionality
+
+## [1.1.0]
+- Additional Effect for blocked user: Comments and replies content can't be seen unless it's revealed
+- Ban & Unban User button and dialog for Administrator / Developer
+- Ban Effect (User is unable to login and kicked out if online)
+- Fixed bug when finding user that doesn't exist (instead of showing self, it shows 404)
+- Simple Socket for messaging
+- Added more details to Audit Logs

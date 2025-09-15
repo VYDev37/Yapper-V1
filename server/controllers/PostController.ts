@@ -1,10 +1,9 @@
 import type { Context } from 'hono';
-import { and, eq, inArray, ilike, desc, sql } from 'drizzle-orm';
+import { and, eq, inArray, ilike, desc, sql, notInArray } from 'drizzle-orm';
 
-import { posts, postLikes, postComments, postCommentLikes, users, notifications } from '../database/schema';
+import { posts, postLikes, postComments, postCommentLikes, users, notifications, blockedList } from '../database/schema';
 import db from '../database/pool';
 
-import { Truncate } from '../utilities/Text';
 import HTTPStatus from '../utilities/HTTPStatus';
 
 export default class PostController {
@@ -25,30 +24,21 @@ export default class PostController {
             else if (search)
                 where = ilike(posts.description, `%${search}%`);
 
-            let likedPosts: number[] = [];
-            let likedComments: number[] = [];
+            const isBlocked = await db.select({ blockedId: blockedList.blockedId }).from(blockedList).where(eq(blockedList.userId, +user.id));
+            const blockedUsers = isBlocked.map(p => p.blockedId);
 
             const result = await db.select({
-                postId: posts.id,
-                ownerId: posts.ownerId,
-                description: posts.description,
-                imageUrl: posts.imageUrl,
-                likeCount: posts.likeCount,
-                commentCount: posts.commentCount,
-                createdAt: posts.createdAt,
-                full_name: users.full_name,
-                username: users.username,
-                role_id: users.role_id,
-                verified: users.verified,
-                profileUrl: users.profileUrl
-            }).from(posts).leftJoin(users, eq(posts.ownerId, users.id)).where(where);
+                postId: posts.id, ownerId: posts.ownerId,
+                description: posts.description, imageUrl: posts.imageUrl,
+                likeCount: posts.likeCount, commentCount: posts.commentCount,
+                createdAt: posts.createdAt, profileUrl: users.profileUrl,
+                full_name: users.full_name, username: users.username,
+                role_id: users.role_id, verified: users.verified,
+            }).from(posts).leftJoin(users, eq(posts.ownerId, users.id)).where(and(where, blockedUsers.length > 0 ? notInArray(posts.ownerId, blockedUsers) : undefined));
 
             const isLiked = await db.select({ postId: postLikes.postId }).from(postLikes).where(
-                and(
-                    inArray(postLikes.postId, result.map(p => p.postId)),
-                    eq(postLikes.userId, +user.id)
-                ));
-            likedPosts = isLiked.map(p => p.postId);
+                and(inArray(postLikes.postId, result.map(p => p.postId)), eq(postLikes.userId, +user.id)));
+            const likedPosts: number[] = isLiked.map(p => p.postId) || [];
 
             const comments = await db.select({
                 id: postComments.id, postId: postComments.postId,
@@ -64,8 +54,11 @@ export default class PostController {
 
             const commentLiked = await db.select({ commentId: postCommentLikes.commentId }).from(postCommentLikes).where(
                 and(inArray(postCommentLikes.commentId, comments.map(c => c.id)), eq(postCommentLikes.userId, +user.id)));
+            const likedComments: number[] = commentLiked.map(c => c.commentId) || [];
 
-            likedComments = commentLiked.map(c => c.commentId);
+            const commentBlocked = await db.select({ blockedId: blockedList.blockedId }).from(blockedList).where(
+                and(inArray(blockedList.blockedId, comments.map(c => c.userId)), eq(blockedList.userId, +user.id)));
+            const blockedComments: number[] = commentBlocked.map(c => c.blockedId);
 
             const repliesMap: Record<number, any[]> = {};
             for (const c of comments) {
@@ -73,14 +66,17 @@ export default class PostController {
                     if (!repliesMap[c.parentId])
                         repliesMap[c.parentId] = [];
 
-                    repliesMap[c.parentId].push({ ...c, liked: likedComments.includes(c.id) });
+                    const liked: boolean = likedComments.includes(c.id);
+                    const blocked: boolean = blockedComments.includes(c.userId);
+
+                    repliesMap[c.parentId].push({ ...c, liked, blocked });
                 }
             }
 
             const packedPosts = result.map(post => ({
                 ...post,
                 comments: comments.filter(c => c.postId === post.postId && !c.parentId)
-                    .map(c => ({ ...c, liked: likedComments.includes(c.id), replies: repliesMap[c.id] })),
+                    .map(c => ({ ...c, liked: likedComments.includes(c.id), blocked: blockedComments.includes(c.userId), replies: repliesMap[c.id] })),
                 liked: likedPosts.includes(post.postId)
             }));
 
@@ -111,30 +107,6 @@ export default class PostController {
             return c.json({ message: "Internal server error." }, HTTPStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
-    static async ReportPost(c: Context) {
-        const user = c.get("user");
-        const { postId, reason } = await c.req.json();
-
-        if (!user)
-            return c.json({ message: "Forbidden." }, HTTPStatus.FORBIDDEN);
-
-        const post = await db.query.posts.findFirst({ where: eq(posts.id, +postId) });
-        if (!post)
-            return c.json({ message: "Post not found" }, HTTPStatus.NOT_FOUND);
-
-        await db.insert(notifications).values({
-            recipientId: 0,
-            senderId: +user.id,
-            action: `reported a post (Reason: ${Truncate(reason, 50)}).`,
-            postId: post.id,
-            isRead: false,
-            devOnly: true
-        });
-
-        return c.json({ message: "Report submitted." }, HTTPStatus.OK);
-    }
-
 
     static async AddLike(c: Context) {
         try {
@@ -257,8 +229,10 @@ export default class PostController {
         try {
             const user = c.get("user");
             const { commentId, postId } = c.req.param();
+            const { security_code } = await c.req.json();
 
-            if (!user)
+            const userDB = await db.query.users.findFirst({ where: eq(users.id, +user.id || 0) });
+            if (!userDB)
                 return c.json({ message: "Forbidden access." }, HTTPStatus.FORBIDDEN);
 
             const post = await db.query.posts.findFirst({ where: eq(posts.id, +postId) });
@@ -269,8 +243,15 @@ export default class PostController {
             if (!postComment)
                 return c.json({ message: "Comment not found." }, HTTPStatus.NOT_FOUND);
 
-            if (postComment.userId !== +user.id && user.role_id < 2 && post.ownerId !== +user.id)
-                return c.json({ message: "You are not allowed to do this." }, HTTPStatus.FORBIDDEN);
+            if (postComment.userId !== +user.id) {
+                if (userDB.role_id < 2) {
+                    if (postComment.userId !== +user.id && post.ownerId !== +user.id)
+                        return c.json({ message: "You are not allowed to do this." }, HTTPStatus.FORBIDDEN);
+                } else {
+                    if (!security_code || !userDB.security_code || userDB.security_code !== security_code.trim())
+                        return c.json({ message: "Security code doesn't match. If you don't have one, please create first." }, HTTPStatus.CONFLICT);
+                }
+            }
 
             const parentId: number = postComment.parentId!;
             if (parentId) {
@@ -295,16 +276,23 @@ export default class PostController {
         try {
             const user = c.get("user");
             const postId: number = +(c.req.param("id") || 0);
+            const { security_code } = await c.req.json();
 
-            if (!user)
+            const userDB = await db.query.users.findFirst({ where: eq(users.id, +user.id || 0) });
+            if (!userDB)
                 return c.json({ message: "Forbidden access." }, HTTPStatus.FORBIDDEN);
 
             const post = await db.query.posts.findFirst({ where: eq(posts.id, postId) });
             if (!post)
                 return c.json({ message: "Post not found." }, HTTPStatus.NOT_FOUND);
 
-            if (post.ownerId !== user.id && user.role_id < 2)
-                return c.json({ message: "You are not allowed to do this." }, HTTPStatus.FORBIDDEN);
+            if (post.ownerId !== userDB.id) {
+                if (userDB.role_id < 2)
+                    return c.json({ message: "You are not allowed to do this." }, HTTPStatus.FORBIDDEN);
+
+                if (!security_code || !userDB.security_code || userDB.security_code !== security_code.trim())
+                    return c.json({ message: "Security code doesn't match. If you don't have one, please create first." }, HTTPStatus.CONFLICT);
+            }
 
             await db.delete(posts).where(eq(posts.id, post.id));
 

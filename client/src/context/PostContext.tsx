@@ -18,7 +18,10 @@ export interface PostComments {
     username: string;
     profileUrl: string;
     verified: boolean;
+     // custom states
     liked: boolean;
+    blocked: boolean;
+    // custom state ends
     createdAt: Date;
     replies: PostComments[];
 }
@@ -36,7 +39,9 @@ export interface Post {
     createdAt: Date;
     likeCount: number;
     commentCount: number;
+    // custom states
     liked: boolean;
+    // custom states end
     comments?: PostComments[];
 };
 
@@ -47,8 +52,8 @@ interface PostContextType {
     AddLike: (id: number) => Promise<void>;
     LikeComment: (postId: number, commentId: number, isReply: boolean) => Promise<void>;
     FetchPost: (search?: string, username?: string) => Promise<void>;
-    ReportPost: (postId: number) => Promise<void>;
-    DeleteItem: (postId: number, fn?: () => void) => Promise<void>;
+    ReportPost: (postId: number, commentId?: number | null) => Promise<void>;
+    DeleteItem: (postId: number, fn?: () => void, security_code?: string) => Promise<void>;
 };
 
 const PostContext = React.createContext<PostContextType | undefined>(undefined);
@@ -70,14 +75,19 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, []);
 
-    const ReportPost = async (postId: number) => {
-        try {
-            const result = await SwalUtility.SendInputDialog("Report Post", "Please input the reason for your report.", "text", "OK");
-            const res = await axios.post('/add-report', { postId, reason: result.value });
-            if (res.status === 200) 
-                SwalUtility.SendMessage("Success", res.data.message, "success");
-        } catch (err: any) {
-            SwalUtility.SendMessage("Failed", err.message, "error");
+    const ReportPost = async (postId: number, commentId?: number | null) => {
+        const result = await SwalUtility.SendInputDialog(commentId ? "Report Comment" : "Report Post",
+            "Please input the reason for your report.", "text", "OK");
+
+        const val = result.value?.trim();
+        if (val) {
+            try {
+                const res = await axios.post('/add-report/post', { postId, commentId, reason: val });
+                if (res.status === 200)
+                    SwalUtility.SendMessage("Success", res.data.message, "success");
+            } catch (err: any) {
+                SwalUtility.SendMessage("Failed", err.message, "error");
+            }
         }
     }
 
@@ -211,11 +221,11 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, []);
 
-    const DeleteItem = async (postId: number, fn?: () => void) => {
+    const DeleteItem = async (postId: number, fn?: () => void, security_code?: string) => {
         const result = await SwalUtility.SendConfirmationDialog("Delete Post Confirmation", "Are you sure you want to delete this post?", "Delete");
         if (result.isConfirmed) {
             try {
-                const response = await axios.delete(`delete-post/${postId}`);
+                const response = await axios.post(`delete-post/${postId}`, { security_code });
                 if (response.status === 200) {
                     await SwalUtility.SendMessage("Success", response.data?.message);
                     FetchPost();

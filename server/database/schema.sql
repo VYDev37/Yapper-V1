@@ -13,8 +13,10 @@ CREATE TABLE IF NOT EXISTS "users" (
     "profile_url" varchar(255) DEFAULT 'profile-icon-default.png' NOT NULL,
     "role_id" smallint DEFAULT 0 NOT NULL,
     "security_code" text,
+    "ban_reason" text,
     "followers" integer DEFAULT 0,
     "following" integer DEFAULT 0,
+    "banned_until" timestamp,
     "created_at" timestamptz DEFAULT now(),
     "updated_at" timestamptz DEFAULT now(),
     CONSTRAINT "users_username_unique" UNIQUE("username"),
@@ -144,11 +146,10 @@ CREATE TABLE IF NOT EXISTS "server_token" (
 -- NOTIFICATIONS
 -- =====================
 CREATE TABLE IF NOT EXISTS "notifications" (
-	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "notifications_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1),
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
 	"recipient_id" bigint NOT NULL,
 	"sender_id" bigint NOT NULL,
 	"post_id" bigint DEFAULT 0,
-    "is_read" boolean NOT NULL DEFAULT false,
     "dev_only" boolean NOT NULL DEFAULT false,
 	"comment_id" bigint DEFAULT 0,
 	"action" text NOT NULL,
@@ -171,5 +172,33 @@ CREATE TABLE IF NOT EXISTS "notifications" (
         ON DELETE CASCADE ON UPDATE NO ACTION
 );
 
-INSERT INTO public.users (id, full_name, username, email, verified, email_verified, "password", password_length, profile_url, role_id, followers, "following", created_at, updated_at, security_code)
-VALUES(0, 'system', 'system', 'system@gmail.com', false, false, '$argon2id$v=19$m=65536,t=3,p=4$aqV6gLZKSYp8B/GI0prVkA$9AwQyhFzzowrhiXggAFVYKfsXSTb1tB6aFv3PiMwcAQ', 6, 'profile-icon-default.png', 0, 0, 0, '2025-09-02 15:09:10.872', '2025-09-02 15:09:10.872', NULL);
+CREATE TABLE IF NOT EXISTS "reports" (
+	"id" bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+	"user_id" bigint NOT NULL,
+	"reporter_id" bigint NOT NULL,
+	"post_id" bigint,
+	"comment_id" bigint,
+    "duration" bigint DEFAULT 0,
+	"reason" text NOT NULL,
+    "log_type" text DEFAULT 'Reported' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now(),
+    CONSTRAINT "reports_user_id_users_id_fk" 
+        FOREIGN KEY ("user_id") 
+        REFERENCES "public"."users"("id") 
+        ON DELETE CASCADE ON UPDATE NO ACTION,
+    CONSTRAINT "reports_reporter_id_users_id_fk" 
+        FOREIGN KEY ("reporter_id") 
+        REFERENCES "public"."users"("id") 
+        ON DELETE CASCADE ON UPDATE NO ACTION,
+    CONSTRAINT "reports_post_id_posts_id_fk" 
+        FOREIGN KEY ("post_id") 
+        REFERENCES "public"."posts"("id") 
+        ON DELETE CASCADE ON UPDATE NO ACTION,
+    CONSTRAINT "reports_comment_id_post_comments_id_fk" 
+        FOREIGN KEY ("comment_id") 
+        REFERENCES "public"."post_comments"("id") 
+        ON DELETE CASCADE ON UPDATE NO ACTION
+);
+
+INSERT INTO public.users (id, full_name, username, email, verified, email_verified, "password", password_length, profile_url, role_id, followers, "following", banned_until, created_at, updated_at, security_code)
+VALUES(0, 'system', 'system', 'system@gmail.com', false, false, '$argon2id$v=19$m=65536,t=3,p=4$aqV6gLZKSYp8B/GI0prVkA$9AwQyhFzzowrhiXggAFVYKfsXSTb1tB6aFv3PiMwcAQ', 6, 'profile-icon-default.png', 0, 0, 0, NULL, '2025-09-02 15:09:10.872', '2025-09-02 15:09:10.872', NULL);

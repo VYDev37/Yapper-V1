@@ -61,7 +61,17 @@ export default function Post({ modal = false }) {
         }
     }
 
-    
+    const HandleDeletion = async (postId: number, postOwner: number, fn: () => void) => {
+        let security_code: string = "";
+
+        if (user?.role_id! >= 2 && postOwner !== user?.id) {
+            security_code = (await SwalUtility.AskSecurityCode(user?.code))!;
+            if (!security_code)
+                return;
+        }
+
+        await DeleteItem(postId, fn, security_code);
+    }
 
     const post: Post | undefined = posts.find(p => p.postId === +id! && p.ownerId === +ownerId!);
 
@@ -137,7 +147,7 @@ export default function Post({ modal = false }) {
                                 </div>
                             )}
                             {(user.role_id >= 2 || user.id === post.ownerId) && (
-                                <div className="ms-3 text-danger" onClick={() => DeleteItem(post?.postId, CloseModal)}>
+                                <div className="ms-3 text-danger" onClick={() => HandleDeletion(post?.postId, post?.ownerId, CloseModal)}>
                                     <i className="fas fa-trash"></i>
                                     <span className="px-1">Delete</span>
                                 </div>
@@ -149,14 +159,14 @@ export default function Post({ modal = false }) {
                 {/* Comments section here */}
                 {
                     post.comments?.map(comment => (
-                        <Comments comment={comment} key={comment.id} postOwner={post.ownerId} HandleReply={HandleReply} user={user} LikeComment={LikeComment} FetchPost={FetchPost} />
+                        <Comments comment={comment} key={comment.id} ReportPost={ReportPost} postOwner={post.ownerId} HandleReply={HandleReply} user={user} LikeComment={LikeComment} FetchPost={FetchPost} />
                     ))
                 }
             </div>
             <div className="modal-footer position-sticky bottom-0 border-top bg-white p-2">
                 <form className="d-flex align-items-center w-100">
                     <img src={`/public/profile-pics/${user.profileUrl}`} alt="" className="rounded-circle me-3" style={{ height: '40px', width: '40px', objectFit: 'cover' }} />
-                    <textarea ref={textareaRef} placeholder="Enter your comment here..." value={comment} 
+                    <textarea ref={textareaRef} placeholder="Enter your comment here..." value={comment}
                         onChange={(e) => {
                             const val = e.target.value;
                             setComment(val);

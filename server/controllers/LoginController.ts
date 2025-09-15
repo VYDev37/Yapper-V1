@@ -6,6 +6,7 @@ import { users } from '../database/schema';
 
 import db from '../database/pool';
 import HTTPStatus from '../utilities/HTTPStatus';
+import { GetTimeLeft } from '../utilities/Datetime';
 
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
@@ -28,6 +29,11 @@ export default class LoginController {
             if (!userRecord || !verifiedUsername || !verifiedPassword)
                 return c.json({ message: 'Invalid username or password.' }, HTTPStatus.UNAUTHORIZED);
 
+            if (userRecord.banned_until! < new Date()) 
+                await db.update(users).set({ banned_until: null, ban_reason: null }); // revoke ban
+            else 
+                return c.json({ message: `You're currently being banned. Please wait for ${GetTimeLeft(userRecord.banned_until!)} for the ban to revoke. (Reason: ${userRecord.ban_reason})` }, HTTPStatus.FORBIDDEN);
+
             const verifyPassword: boolean = await argon2.verify(userRecord.password, verifiedPassword);
 
             if (verifyPassword) {
@@ -35,7 +41,6 @@ export default class LoginController {
                     id: userRecord.id,
                     username: userRecord.username,
                     full_name: userRecord.full_name,
-                    role_id: userRecord.role_id,
                     email_verified: userRecord.email_verified,
                     createdAt: userRecord.createdAt
                 };

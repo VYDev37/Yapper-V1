@@ -1,5 +1,5 @@
 import React from "react";
-import { useParams, NavLink, Outlet } from "react-router-dom";
+import { useParams, useNavigate, NavLink, Outlet } from "react-router-dom";
 
 import type { User } from "../../context/UserContext";
 import { useUser } from "../../context/UserContext";
@@ -14,12 +14,15 @@ import SwalUtility from "../../utilities/SwalUtility";
 import type { ModifiedObj } from "./Helper/Profile";
 import { ProfileHeader } from "./Helper/Profile";
 
+import NotFound from "../Fallback/404";
+
 // import { ProfileInfo } from "./Helper/Profile/ProfileInfo";
 
 export default function Profile() {
     const { username } = useParams();
+    const navigate = useNavigate();
 
-    const { user, RefreshUser, UpdateUser } = useUser();
+    const { user, RefreshUser, UpdateUser, ReportUser } = useUser();
 
     const [modified, setModified] = React.useState<string[]>([]);
     const [previewUrl, setPreviewUrl] = React.useState<string>('');
@@ -61,10 +64,14 @@ export default function Profile() {
             return;
         }
 
-        const otherData = await GetExtra(username);
+        try {
+            const otherData = await GetExtra(username);
 
-        setOther(otherData);
-        setModifiedObj({ ...modifiedObj, full_name: otherData?.full_name, username: otherData?.username });
+            setOther(otherData);
+            setModifiedObj({ ...modifiedObj, full_name: otherData?.full_name, username: otherData?.username });
+        } catch (err) {
+            setOther(null);
+        }
     }
 
     const AddModifiedField = (field: string) => setModified(prev => prev.includes(field) ? prev : [...modified, field]);
@@ -75,12 +82,88 @@ export default function Profile() {
             return;
         // API
         try {
+            setSubmitting(true);
             const result = await axios.post(`add-follower/${id}`);
 
             if (result.status === 200)
                 GetOthersData(false);
-        } catch (_) { }
+        } catch (_) {
+        } finally {
+            setSubmitting(false);
+        }
     }
+
+    const BanUser = async (id: number, isBanned: boolean) => {
+        if (submitting)
+            return;
+
+        try {
+            setSubmitting(true);
+            if (!isAdmin || isSelf)
+                return;
+
+            const security_code: string = (await SwalUtility.AskSecurityCode(user?.code))!;
+            if (!security_code)
+                return;
+
+            if (!isBanned) {
+                const ban_panel = (await SwalUtility.SendBanPanel(user?.role_id))!;
+                if (!ban_panel.isConfirmed)
+                    return;
+
+                const { reason, duration } = ban_panel.value!;
+                const result = await axios.post('/add-ban', { id, reason, duration, security_code });
+                if (result.status === 200) {
+                    // kick user if online
+                    // const socket = new WebSocket("ws://localhost:1337");
+                    // socket.onopen = () => {
+                    //     console.log("✅ WebSocket connected");
+                    //     socket.send(JSON.stringify({ action: "Ban", userId: id }));
+                    // }
+                    // socket.onmessage = (event) => console.log("📩", event.data);
+                    // socket.onerror = (err) => console.error("❌ WS error", err);
+                    // socket.onclose = () => console.log("🔌 WS disconnected");
+
+                    await SwalUtility.SendMessage("Success", result.data.message, "success");
+                    await RefreshUser();
+                } else {
+                    await SwalUtility.SendMessage("Error", result.data.message, "error");
+                }
+            } else {
+                const result = await SwalUtility.SendConfirmationDialog("Unban User", "Are you sure you want to unban this user?", "Unban");
+                if (result.isConfirmed) {
+                    const result = await axios.post('/add-ban', { id, reason: "Unban", security_code });
+                    if (result.status === 200) {
+                        // kick user if online
+                        await SwalUtility.SendMessage("Success", result.data.message, "success");
+                        await RefreshUser();
+                    } else {
+                        await SwalUtility.SendMessage("Error", result.data.message, "error");
+                    }
+                }
+            }
+        } catch (err: any) {
+            SwalUtility.SendMessage("Failed", err.message, "error");
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    const BlockUser = async (userId: number) => {
+        if (submitting)
+            return;
+        // API
+        try {
+            setSubmitting(true);
+            const result = await axios.post(`add-block/${userId}`);
+
+            if (result.status === 200)
+                GetOthersData(false);
+        } catch (_) {
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     const HandleSubmit = async (e: React.FormEvent) => {
         let allSuccess = true;
@@ -92,17 +175,23 @@ export default function Profile() {
         setSubmitting(true);
 
         try {
+            let security_code: string = "";
+            if (isAdmin && !isSelf) {
+                security_code = (await SwalUtility.AskSecurityCode(user?.code))!;
+                if (!security_code)
+                    return;
+            }
             for (const field of modified) {
                 if (field === 'profile') {
                     const uploadedFile = await HandleUploadFile(modifiedObj?.file!);
-                    const [message, success] = await SendProfileChange(field, { profileUrl: uploadedFile }, profileData?.id!);
+                    const [message, success] = await SendProfileChange(field, { profileUrl: uploadedFile, security_code }, profileData?.id!);
                     if (!success) {
                         SwalUtility.SendMessage("Error", message, "error");
                         allSuccess = false;
                         break;
                     }
                 } else {
-                    const [message, success] = await SendProfileChange(field, { [field]: (modifiedObj as any)[field] }, profileData?.id!);
+                    const [message, success] = await SendProfileChange(field, { [field]: (modifiedObj as any)[field], security_code }, profileData?.id!);
                     if (!success) {
                         SwalUtility.SendMessage("Error", message, "error");
                         allSuccess = false;
@@ -114,11 +203,11 @@ export default function Profile() {
             if (allSuccess)
                 SwalUtility.SendMessage("Saved Changes!", "Your changes have been saved!");
 
-            if (modified.includes('username') || modified.includes('full_name')) {
-                await UpdateUser();
-            } else {
-                await RefreshUser();
-            }
+            await UpdateUser();
+            await RefreshUser();
+
+            if (modified.includes("username") && modifiedObj.username !== username)
+                navigate(`/profile/${modifiedObj.username}`, { replace: true })
 
             // Reset form state
             setFile(null);
@@ -136,6 +225,9 @@ export default function Profile() {
         GetOthersData(isSelf);
     }, [username, isSelf]);
 
+    if (!isSelf && !other)
+        return <NotFound />;
+
     const profileData = other ?? user;
 
     const outletCtx = {
@@ -149,8 +241,9 @@ export default function Profile() {
         <div className="container-fluid profile-container h-100" style={{ overflowY: 'auto' }}>
             <div className="row profile-page d-flex w-100 mt-4">
                 <div className="card p-0">
-                    <ProfileHeader profile={profileData!} modifiedObj={modifiedObj} flags={{ submitting, isSelf, hasAccess, previewUrl }}
-                        actions={{ UpdateProfile, AddFollower }} />
+                    <ProfileHeader profile={profileData!} modifiedObj={modifiedObj}
+                        flags={{ submitting, isSelf, hasAccess, previewUrl, isDev: user?.role_id! >= 2, modified }}
+                        actions={{ UpdateProfile, AddFollower, ReportUser, BlockUser, BanUser }} />
                     <div className="card-body">
                         <div className="col-12">
                             <div className="row ms-1">

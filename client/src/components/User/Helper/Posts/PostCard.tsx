@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 
 import VerifiedIcon from '../../../../assets/verified-check.png';
 import { FormatNumber, GetTimePast } from "../../../../utilities/Format";
+import SwalUtility from "../../../../utilities/SwalUtility";
 
 import type { Post } from '../../../../context/PostContext';
 import type { User } from "../../../../context/UserContext";
@@ -11,7 +12,7 @@ interface PostCardProps {
     isMain: boolean;
     actions: {
         AddLike: (id: number) => Promise<void>;
-        DeleteItem: (postId: number) => Promise<void>;
+        DeleteItem: (postId: number, fn?: () => void, security_code?: string) => Promise<void>;
         ReportPost: (postId: number) => Promise<void>;
     }
     user: User;
@@ -21,6 +22,18 @@ interface PostCardProps {
 export default function PostCard({ displayedPosts, isMain, actions, user, isSelf }: PostCardProps) {
     const navigate = useNavigate();
     const location = useLocation();
+
+    const HandleDeletion = async (postId: number, postOwner: number, fn?: () => void) => {
+        let security_code: string = "";
+
+        if (user?.role_id! >= 2 && postOwner !== user?.id) {
+            security_code = (await SwalUtility.AskSecurityCode(user?.code))!;
+            if (!security_code)
+                return;
+        }
+
+        await actions.DeleteItem(postId, fn, security_code);
+    }
 
     return (
         <div>
@@ -61,8 +74,10 @@ export default function PostCard({ displayedPosts, isMain, actions, user, isSelf
                                         post.imageUrl && (
                                             (isMain || isSelf) ? (
                                                 <img src={`/public/${post.imageUrl}`} alt="" className="rounded-0"
-                                                    style={{ marginLeft: 'calc(115px - 50px)', marginRight: 'calc(115px - 50px)',
-                                                        height: '350px', width: '350px', objectFit: 'cover' }} />
+                                                    style={{
+                                                        marginLeft: 'calc(115px - 50px)', marginRight: 'calc(115px - 50px)',
+                                                        height: '350px', width: '350px', objectFit: 'cover'
+                                                    }} />
                                             ) : (
                                                 <a href={`/public/${post.imageUrl}`}>🔗 An attachment</a>
                                             )
@@ -90,7 +105,7 @@ export default function PostCard({ displayedPosts, isMain, actions, user, isSelf
                                             </div>
                                         )}
                                         {(user?.role_id! >= 2 || user?.id === post?.ownerId) && (
-                                            <div className="ms-3 text-danger" onClick={() => actions.DeleteItem(post?.postId)}>
+                                            <div className="ms-3 text-danger" onClick={() => HandleDeletion(post?.postId, post?.ownerId)}>
                                                 <i className="fas fa-trash"></i>
                                                 <span className="px-1">Delete</span>
                                             </div>

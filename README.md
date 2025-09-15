@@ -12,6 +12,12 @@
 - Database: PostgreSQL
 
 ## Setup
+## Database
+1. Install database tool for PostgreSQL and [its driver](https://www.postgresql.org/). (I use [DBeaver](https://dbeaver.io/) as the tool here for offline, but you can use Supabase for online version.)
+2. Use the `schema.sql` file or copy the script inside to the database tool
+3. Generate the database URL and copy it to `DATABASE_URL` field in `.env`
+Note: If the `schema.sql` file is broken, you can just generate new one with command `pnpm migrate-db` and do step 2.
+
 ## Backend
 - Install BunJS
 - Change the `.env.example` to `.env` and fill the data
@@ -47,7 +53,8 @@
 - [x] Comment Post (Add, load, reply, like, like reply, and delete)
 - [x] Report Post
 - [x] Search Posts
-- [x] Viewing Profile + Functionalities including: Follow, User Posts, and Edit (for owners)
+- [x] Administrator / Developer Features (Ban User, Unban User)
+- [x] Viewing Profile + Functionalities including: Follow, View User Posts, Block User, and Edit (for owners)
 - [x] Notifications Page
 - [ ] Messages Page
 - [x] Settings Page

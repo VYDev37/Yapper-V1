@@ -1,4 +1,3 @@
-import { like } from 'drizzle-orm';
 import { pgTable, text, integer, varchar, timestamp, boolean, smallint, bigint, AnyPgColumn } from 'drizzle-orm/pg-core';
 
 export const users = pgTable("users", {
@@ -13,9 +12,11 @@ export const users = pgTable("users", {
     profileUrl: varchar('profile_url', { length: 255 }).notNull().default('profile-icon-default.png'),
     role_id: smallint('role_id').notNull().default(0),
     security_code: text('security_code'),
+    ban_reason: text('ban_reason'),
     followers: integer('followers').default(0),
     following: integer('following').default(0),
     createdAt: timestamp('created_at', { mode: 'date' }).defaultNow(),
+    banned_until: timestamp('banned_until', { mode: 'date' }),
     updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow().$onUpdate(() => new Date())
 });
 
@@ -70,7 +71,18 @@ export const notifications = pgTable('notifications', {
   commentId: bigint('comment_id', { mode: 'number' }).references(() => postComments.id, { onDelete: 'cascade' }),
   action: text('action').notNull(),
   isRead: boolean('is_read').notNull().default(false),
-  devOnly: boolean('dev_only').notNull().default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow()
+});
+
+export const reportLogs = pgTable('reports', {
+  id: bigint('id', { mode: 'number' }).primaryKey().notNull().generatedAlwaysAsIdentity(),
+  userId: bigint('user_id', { mode: 'number' }).notNull().references(() => users.id, { onDelete: 'cascade' }),
+  reporterId: bigint('reporter_id', { mode: 'number' }).notNull().references(() => users.id, { onDelete: 'cascade' }),
+  postId: bigint('post_id', { mode: 'number' }).references(() => posts.id, { onDelete: 'cascade' }),
+  commentId: bigint('comment_id', { mode: 'number' }).references(() => postComments.id, { onDelete: 'cascade' }),
+  reason: text('reason').notNull(),
+  logType: text('log_type').notNull().default('Reported'),
+  duration: bigint('duration', { mode: 'number' }).default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow()
 });
 
@@ -80,4 +92,11 @@ export const serverToken = pgTable('server_token', {
   token: text('token').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull()
+});
+
+export const blockedList = pgTable('blocked_list', {
+  id: bigint('id', { mode: 'number' }).primaryKey().notNull().generatedAlwaysAsIdentity(),
+  blockedId: bigint('blocked_id', { mode: 'number' }).notNull().references(() => users.id, { onDelete: 'cascade' }),
+  userId: bigint('user_id', { mode: 'number' }).notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow()
 });

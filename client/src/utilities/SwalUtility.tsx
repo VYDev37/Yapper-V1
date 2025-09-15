@@ -25,8 +25,14 @@ export default class SwalUtility {
             inputAttributes: { autocapitalize: "off" },
             confirmButtonText: confirmButtonText,
             showLoaderOnConfirm: true,
-            preConfirm: async (ret) => ret,
-            allowOutsideClick: () => !Swal.isLoading()
+            showCancelButton: true,
+            preConfirm: async (ret) => {
+                if (!ret)
+                    return;
+
+                return ret;
+            },
+            allowOutsideClick: false
         });
     }
 
@@ -85,7 +91,7 @@ export default class SwalUtility {
                         } catch {
                             Swal.showValidationMessage("Message not sent!");
                         }
-                        
+
                     });
                 }
             },
@@ -182,5 +188,95 @@ export default class SwalUtility {
             },
             allowOutsideClick: () => !Swal.isLoading()
         });
+    }
+
+    static async SendBanPanel(role_id?: number) {
+        if (role_id! < 2)
+            return;
+
+        return Swal.fire({
+            title: "Ban Panel",
+            html: `
+      <div class="d-flex flex-column align-items-center text-center mt-3 w-100">
+        <div class="d-flex align-items-center w-100 mb-3">
+          <i class="fas fa-envelope p-3 fs-5"></i>
+          <input id="ban-reason" class="form-control border-0 border-bottom mx-3" type="text" placeholder="Enter ban reason">
+        </div>
+        <div class="w-100 text-start">
+          <div class="form-check mb-2">
+            <input type="radio" id="ban-1h" name="ban_duration" value="1h" class="form-check-input">
+            <label class="form-check-label" for="ban-1h">1 hour</label>
+          </div>
+          <div class="form-check mb-2">
+            <input type="radio" id="ban-1d" name="ban_duration" value="1d" class="form-check-input">
+            <label class="form-check-label" for="ban-1d">1 day</label>
+          </div>
+          <div class="form-check mb-2">
+            <input type="radio" id="ban-1w" name="ban_duration" value="1w" class="form-check-input">
+            <label class="form-check-label" for="ban-1w">7 days</label>
+          </div>
+          <div class="form-check mb-2">
+            <input type="radio" id="ban-1w" name="ban_duration" value="30y" class="form-check-input">
+            <label class="form-check-label" for="ban-30y">Max (30 years)</label>
+          </div>
+          <div class="form-check d-flex align-items-center">
+            <input type="radio" id="ban-custom-radio" name="ban_duration" value="custom" class="form-check-input me-2">
+            <label class="form-check-label me-2" for="ban-custom-radio">Custom:</label>
+            <input type="text" id="ban-custom" class="form-control form-control-sm" placeholder="e.g. 3d or 12h" style="max-width: 120px;">
+          </div>
+        </div>
+      </div>
+    `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: "Ban",
+            showLoaderOnConfirm: true,
+            preConfirm: () => {
+                const reasonInput = document.getElementById("ban-reason") as HTMLInputElement;
+                const selected = document.querySelector<HTMLInputElement>('input[name="ban_duration"]:checked');
+                const customInput = document.getElementById("ban-custom") as HTMLInputElement;
+
+                const reason = reasonInput?.value.trim();
+                let duration = selected?.value;
+
+                if (duration === "custom")
+                    duration = customInput?.value.trim();
+
+                if (!reason || reason.length < 3) {
+                    Swal.showValidationMessage("Reason must be at least 3 characters");
+                    return false;
+                }
+                if (!duration) {
+                    Swal.showValidationMessage("Please select a ban duration");
+                    return false;
+                }
+
+                return { reason, duration };
+            },
+            allowOutsideClick: () => !Swal.isLoading()
+        });
+
+    }
+
+    static async AskSecurityCode(code?: string) {
+        if (!code) {
+            await SwalUtility.SendMessage("Warning", "Please activate 2FA to access this feature!", "warning");
+            return;
+        }
+
+        const res = await SwalUtility.SendInputDialog("Security Code Verification (6 digits)", "Input your security code here", "text", "Confirm");
+        if (!res.isConfirmed)
+            return;
+
+        const val: string = res.value;
+        if (!val || val.trim() === '')
+            return;
+
+        if (val !== code) {
+            await SwalUtility.SendMessage("Error", "Incorrect Security Code!", "error");
+            return;
+        }
+
+        return val;
     }
 }

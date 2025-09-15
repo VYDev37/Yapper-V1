@@ -23,7 +23,6 @@ const ResyncAuth = async (c: Context) => {
         id: userRecord.id,
         username: userRecord.username,
         full_name: userRecord.full_name,
-        role_id: userRecord.role_id,
         email_verified: userRecord.email_verified,
         createdAt: userRecord.createdAt,
     };

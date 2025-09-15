@@ -7,7 +7,13 @@ export const GetTimePast = (startDate: Date | string, shortened: boolean = false
     const now = new Date();
     const diffMs = now.getTime() - begin.getTime();
 
-    const seconds = Math.floor(diffMs / 1000);
+    const result: string = MsToString(diffMs, shortened);
+
+    return result === "just now" ? result : `${result} ago`;
+}
+
+export const MsToString = (ms: number, shortened: boolean = false) => {
+    const seconds = Math.floor(ms / 1000);
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
@@ -16,19 +22,19 @@ export const GetTimePast = (startDate: Date | string, shortened: boolean = false
     const years = Math.floor(months / 12);
 
     if (years > 0)
-        return shortened ? `${years}y` : `${years} year${years > 1 ? 's' : ''} ago`;
+        return shortened ? `${years}y` : `${years} year${years > 1 ? 's' : ''}`;
     if (months > 0)
-        return shortened ? `${months}m` : `${months} month${months > 1 ? 's' : ''} ago`;
+        return shortened ? `${months}m` : `${months} month${months > 1 ? 's' : ''}`;
     if (weeks > 0)
-        return shortened ? `${weeks}w` : `${weeks} week${weeks > 1 ? 's' : ''} ago`;
+        return shortened ? `${weeks}w` : `${weeks} week${weeks > 1 ? 's' : ''}`;
     if (days > 0)
-        return shortened ? `${days}d` : `${days} day${days > 1 ? 's' : ''} ago`;
+        return shortened ? `${days}d` : `${days} day${days > 1 ? 's' : ''}`;
     if (hours > 0)
-        return shortened ? `${hours}h` : `${hours} hour${hours > 1 ? 's' : ''} ago`;
+        return shortened ? `${hours}h` : `${hours} hour${hours > 1 ? 's' : ''}`;
     if (minutes > 0)
-        return shortened ? `${minutes}m` : `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+        return shortened ? `${minutes}m` : `${minutes} minute${minutes > 1 ? 's' : ''}`;
     if (seconds > 0)
-        return shortened ? `${seconds}s` : `${seconds} second${seconds > 1 ? 's' : ''} ago`;
+        return shortened ? `${seconds}s` : `${seconds} second${seconds > 1 ? 's' : ''}`;
     
     return 'just now';
 }

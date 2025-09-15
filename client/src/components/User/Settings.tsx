@@ -18,7 +18,7 @@ interface SettingsOptions {
 }
 
 export default function Settings() {
-    const { user, UpdateUser, RefreshUser } = useUser();
+    const { user, UpdateUser, RefreshUser, Logout } = useUser();
     const [loading, setLoading] = useState<boolean>(false);
 
     const HandleVerification = async () => {
@@ -51,13 +51,9 @@ export default function Settings() {
             let security_code: string | undefined;
 
             if (user?.code) {
-                const res = await SwalUtility.SendInputDialog("Security Code Verification (6 digits)", "Input your security code here", "text", "Confirm");
-                if (res.value !== user?.code) {
-                    await SwalUtility.SendMessage("Error", "Incorrect Security Code!", "error");
+                security_code = await SwalUtility.AskSecurityCode(user?.code);
+                if (!security_code)
                     return;
-                }
-
-                security_code = res.value;
             }
 
             const result = await SwalUtility.SendChangeEmailDialog(user?.email_verified!);
@@ -89,13 +85,9 @@ export default function Settings() {
             let security_code: string | undefined;
 
             if (user?.code) {
-                const res = await SwalUtility.SendInputDialog("Security Code Verification (6 digits)", "Input your security code here", "text", "Confirm");
-                if (res.value !== user?.code) {
-                    await SwalUtility.SendMessage("Error", "Incorrect Security Code!", "error");
+                security_code = await SwalUtility.AskSecurityCode(user?.code);
+                if (!security_code)
                     return;
-                }
-
-                security_code = res.value;
             }
 
             const result = await SwalUtility.SendChangePassword(user?.email_verified!);
@@ -139,7 +131,36 @@ export default function Settings() {
         }
     }
 
+    const HandleLogout = async () => {
+        if (loading)
+            return;
+
+        try {
+            setLoading(true);
+
+            const result = await SwalUtility.SendConfirmationDialog("Are you sure", "You want to log out.", "Log out");
+
+            if (result.isConfirmed)
+                Logout();
+        } catch (_) {
+            //console.log(err);
+            SwalUtility.SendMessage("Oops!", "Something is wrong when trying to log out", "error");
+        } finally {
+            setLoading(false);
+        }
+    }
+
     const options: SettingsOptions[] = [
+        {
+            name: "Sign out",
+            description: "Click the button to log out.",
+            icon: "fa-sign-out",
+            infoText: "Click the button to log out.",
+            button: {
+                text: "Log out",
+                OnExecute: HandleLogout
+            }
+        },
         {
             name: "Email Status",
             description: `Your email (${user?.email}) is ${user?.email_verified ? "verified." : "not verified."}`,

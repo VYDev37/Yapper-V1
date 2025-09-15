@@ -1,21 +1,14 @@
-import argon2 from 'argon2';
-import jwt from 'jsonwebtoken';
-
 import type { Context } from 'hono';
 import { deleteCookie, getCookie } from 'hono/cookie';
 
-import { eq, and, sql, gt, or } from 'drizzle-orm';
-import { users, followingLogs, notifications, postComments, posts, serverToken } from '../database/schema';
+import db from '../database/pool';
+import { eq, and } from 'drizzle-orm';
+import { blockedList, users, followingLogs, notifications, posts } from '../database/schema';
 
 import { IsImage, FileExist } from '../utilities/FileReader';
 import { OnProfileChange, OnUsernameChange, OnNameChange, OnEmailChange, OnPasswordChange, OnEnableSecurity } from './helpers/user';
 
 import HTTPStatus from '../utilities/HTTPStatus';
-import SendMail from '../utilities/MailSender';
-
-import db from '../database/pool';
-
-import GetToken from '../middlewares/GetToken';
 
 export default class UserController {
     static async GetTokenBase(c: Context) {
@@ -51,48 +44,41 @@ export default class UserController {
             const user = c.get('user');
             const username: string = c.req.param('username')?.toLowerCase();
 
-            if (!user)
+            const selfDB = await db.query.users.findFirst({ where: eq(users.id, +user.id || 0) });
+            if (!selfDB)
                 return c.json({ error: 'Forbidden access.' }, HTTPStatus.FORBIDDEN);
 
             const isSelf = !username || user.username === username || self;
             const targetId = isSelf ? user.username : username;
 
             const userDB = await db.query.users.findFirst({ where: eq(users.username, targetId) });
-
             if (!userDB)
                 return c.json({ error: 'User not found.' }, HTTPStatus.NOT_FOUND);
 
-            const hasAccess = user.role_id >= 2 || isSelf;
+            const hasAccess = selfDB.role_id >= 2 || isSelf;
 
             const profileUrl: string = (FileExist(`profile-pics/${userDB.profileUrl}`) && IsImage(userDB.profileUrl))
                 ? userDB.profileUrl
                 : 'profile-icon-default.png';
 
             let packedData: any = {
-                verified: userDB.verified,
-                followers: userDB.followers,
-                following: userDB.following,
-                profileUrl
+                verified: userDB.verified, profileUrl, ban_reason: userDB.ban_reason,
+                followers: userDB.followers, following: userDB.following,
+                role_id: userDB.role_id, banned_until: userDB.banned_until,
             };
 
-            if (!isSelf) {
+            if (!isSelf || (isSelf && (user.full_name !== userDB.full_name || user.username !== userDB.username))) {
                 Object.assign(packedData, {
-                    full_name: userDB.full_name,
-                    username: userDB.username,
-                    role_id: userDB.role_id,
-                    id: userDB.id
+                    full_name: userDB.full_name, username: userDB.username, id: userDB.id
                 });
             }
 
             if (hasAccess) {
                 if (isSelf)
-                    Object.assign(packedData, {
-                        code: userDB.security_code
-                    });
+                    Object.assign(packedData, { code: userDB.security_code });
 
                 Object.assign(packedData, {
-                    email_verified: userDB.email_verified,
-                    email: userDB.email,
+                    email_verified: userDB.email_verified, email: userDB.email,
                     secret: userDB.password_length
                 });
             }
@@ -102,6 +88,12 @@ export default class UserController {
             });
             const isFollowed = !!followedData;
 
+            const userBlocked = await db.query.blockedList.findFirst({ 
+                where: and(eq(blockedList.userId, +user.id), eq(blockedList.blockedId, userDB.id)) 
+            });
+            const isBlocked = !!userBlocked;
+
+            Object.assign(packedData, { blocked: isBlocked });
             Object.assign(packedData, { followed: isFollowed });
 
             return c.json({ info: packedData }, HTTPStatus.OK);
@@ -121,10 +113,20 @@ export default class UserController {
             if (!user)
                 return c.json({ error: 'Forbidden access.' }, HTTPStatus.FORBIDDEN);
 
-            const userId = +id;
+            const userId: number = +id;
+            const security_code: string = body.security_code;
 
-            if (user.role_id < 2 && userId !== +user.id)
+            const userDB = await db.query.users.findFirst({ where: eq(users.id, +user.id) });
+            if (!userDB)
                 return c.json({ error: 'Forbidden access.' }, HTTPStatus.FORBIDDEN);
+
+            if (userId !== userDB.id) {
+                if (userDB.role_id < 2)
+                    return c.json({ message: "You are not allowed to do this." }, HTTPStatus.FORBIDDEN);
+                 
+                if (!security_code || !userDB.security_code || userDB.security_code !== security_code.trim()) 
+                    return c.json({ message: "Security code doesn't match. If you don't have one, please create first." }, HTTPStatus.CONFLICT);    
+            }
 
             switch (type.toLowerCase()) {
                 case "profile": {
@@ -155,166 +157,11 @@ export default class UserController {
         }
     }
 
-    static async AddFollow(c: Context) {
-        try {
-            const user = c.get('user');
-            const id: number = +c.req.param('id');
-
-            if (!user)
-                return c.json({ message: "Access forbidden." }, HTTPStatus.FORBIDDEN);
-
-            const userDB = await db.query.users.findFirst({ where: eq(users.id, +user.id) });
-            if (!userDB)
-                return c.json({ message: "Access forbidden." }, HTTPStatus.FORBIDDEN);
-
-            const targetDB = await db.query.users.findFirst({ where: eq(users.id, id) });
-            if (!targetDB || targetDB.id === userDB.id)
-                return c.json({ message: "Access forbidden." }, HTTPStatus.FORBIDDEN);
-
-            const where = and(eq(followingLogs.userId, userDB.id), eq(followingLogs.followedId, targetDB.id));
-            const followLogs = await db.query.followingLogs.findFirst({ where });
-
-            const followed: boolean = !followLogs; // check if the user hasn't followed before
-            const followers: number = targetDB.followers! + (followed ? 1 : -1); // not followed before = add follower, the follow function
-            const following: number = userDB.following! + (followed ? 1 : -1); // not followed before = add following count, the follow function
-
-            await db.update(users).set({ followers }).where(eq(users.id, targetDB.id)); // update target's follower count 
-            await db.update(users).set({ following }).where(eq(users.id, userDB.id)); // update follower's following count
-
-            if (followed) {
-                await db.insert(followingLogs).values({ followedId: targetDB.id, userId: userDB.id });
-                await db.insert(notifications).values({ recipientId: targetDB.id, senderId: userDB.id, action: "followed your account." });
-            }
-            else {
-                await db.delete(followingLogs).where(where);
-            }
-
-            return c.json({ message: followed ? "Follow added." : "Follow removed.", postData: { followers, following, followed } }, HTTPStatus.OK);
-        } catch (err) {
-            console.error(err);
-            return c.json({ message: "Internal server error." }, HTTPStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    static async SendVerificationMail(c: Context) {
-        try {
-            const user = c.get('user');
-            if (!user)
-                return c.json({ error: 'Forbidden access.' }, HTTPStatus.FORBIDDEN);
-
-            const tokenType = sql<string>`split_part(${serverToken.token}, '|', 2)`;
-
-            const type: string = await c.req.param('type');
-            const existing = await db.query.serverToken.findFirst({
-                where: and(
-                    eq(serverToken.userId, +user.id),
-                    eq(tokenType, type),
-                    gt(serverToken.expiresAt, new Date()) // not expired
-                ),
-            });
-
-            const token: string = `${Math.floor(1000 + Math.random() * 9000)}`; // 4 digit
-
-            const userDB = await db.query.users.findFirst({ where: eq(users.id, +user.id) });
-            if (!userDB)
-                return c.json({ error: 'User not found.' }, HTTPStatus.NOT_FOUND);
-
-            if (existing) {
-                await SendMail({ targetMail: userDB.email, subject: 'Verify Your Email', content: `Your OTP is ${existing.token.split('|')[0]}, use this to verify your email.\nThis code expires in 5 minutes.` });
-                return c.json({ message: 'Mail resent.' }, HTTPStatus.OK);
-            }
-
-            // alur: generate random number -> send the mail -> return the code -> fetch in frontend?
-            await db.insert(serverToken).values({
-                userId: user.id,
-                token: `${token}|${type}`,
-                expiresAt: new Date(Date.now() + 1 * 5 * 60 * 1000)
-            });
-
-            await SendMail({ targetMail: userDB.email, subject: 'Verify Your Email', content: `Your OTP is ${token}, use this to verify your email.\nThis code expires in 5 minutes.` });
-            return c.json({ message: 'Mail sent.' }, HTTPStatus.OK);
-        } catch (err) {
-            console.error(err);
-            return c.json({ message: 'Internal server error.' }, HTTPStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    static async SendResetPassword(c: Context) {
-        try {
-            const { username } = await c.req.json();
-            const verifiedUsername: string = username?.toLowerCase().trim();
-
-            const userRecord = await db.query.users.findFirst({
-                where: or(
-                    eq(users.username, verifiedUsername),
-                    eq(users.email, verifiedUsername)
-                )
-            });
-
-            if (!userRecord || !verifiedUsername)
-                return c.json({ message: 'That account does not exist. Did you typed wrong username or email?' }, HTTPStatus.UNAUTHORIZED);
-
-            // TODO: Generate token to send it to email
-            const token = jwt.sign({ id: userRecord.id }, Bun.env.JWT_SECRET!, { expiresIn: '5m' });
-
-            await db.insert(serverToken).values({
-                userId: userRecord.id,
-                token: `${token}|forget_password`,
-                expiresAt: new Date(Date.now() + 1 * 5 * 60 * 1000)
-            });
-            await SendMail({
-                targetMail: userRecord.email, subject: 'Reset Password', content: `
-                Hello ${userRecord.username}, we've received your request for password reset.
-                Please click this link to reset your password:\n
-                http://localhost:5173/reset-password/${userRecord.id}/${token}
-
-                If you didn't request this, ignore this email.
-            ` });
-
-            return c.json({ message: "Reset password verification has been sent, please check your mail to proceed." }, HTTPStatus.OK);
-        } catch (err) {
-            console.error(err);
-            return c.json({ message: 'Internal server error.' }, HTTPStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    static async ResetPassword(c: Context) {
-        try {
-            const { id, token } = c.req.param();
-            const { password } = await c.req.json();
-
-            const newPassword: string = password?.trim();
-            if (!newPassword)
-                return c.json({ message: "All fields are required." }, HTTPStatus.CONFLICT);
-            if (newPassword.length < 5 || newPassword.length > 25)
-                return c.json({ message: 'New password must be at least 5 characters long and 25 characters at maximum.' }, HTTPStatus.CONFLICT);
-
-            const tok = await GetToken(+id, token, "forget_password");
-            if (!tok)
-                return c.json({ message: "Request not found." }, HTTPStatus.NOT_FOUND);
-
-            const pw = await argon2.hash(newPassword);
-            await db.update(users).set({ password: pw, password_length: newPassword.length }).where(eq(users.id, +id));
-
-            return c.json({ message: 'Password reset successful.' }, HTTPStatus.OK);
-        } catch (err) {
-            console.error(err);
-            return c.json({ message: 'Internal server error.' }, HTTPStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
     static async GetNotifications(c: Context) {
         try {
             const user = c.get("user");
             if (!user)
                 return c.json({ message: "Forbidden." }, HTTPStatus.FORBIDDEN);
-
-            let where;
-
-            if (user.role_id >= 2)
-                where = or(eq(notifications.recipientId, +user.id), eq(notifications.devOnly, true));
-            else
-                where = and(eq(notifications.recipientId, +user.id), eq(notifications.devOnly, false));
 
             const result = await db.select({
                 id: notifications.id,
@@ -332,8 +179,7 @@ export default class UserController {
             }).from(notifications)
                 .leftJoin(users, eq(notifications.senderId, users.id))
                 .leftJoin(posts, eq(notifications.postId, posts.id))
-                .leftJoin(postComments, eq(notifications.commentId, postComments.id))
-                .where(where)
+                .where(eq(notifications.recipientId, +user.id));
 
             return c.json({ notifications: result }, HTTPStatus.OK);
         } catch (err) {

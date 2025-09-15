@@ -1,9 +1,8 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 
-import NotificationHandler from "../../utilities/NotificationHandler";
-
 import { GetTimePast, Truncate } from "../../utilities/Format";
+import { axios } from "../../config";
 
 interface NotificationObj {
     id: number;
@@ -32,8 +31,13 @@ export default function Notification() {
 
     React.useEffect(() => {
         const fn = async () => {
-            const notification: NotificationObj[] = await NotificationHandler.Get();
-            setNotifications(notification);
+            try {
+                const response = await axios.get('/get-notifications');
+                setNotifications(response.data.notifications);
+            } catch (err) {
+                console.log(err);
+                setNotifications([]);
+            }
         }
 
         fn();
@@ -41,7 +45,7 @@ export default function Notification() {
 
     return (
         <div className="container-fluid notification-container">
-            <h3 className="text-center mt-3 mb-5">Notifications</h3>
+            <h3 className="pt-4 fw-bold mb-5">Notifications</h3>
             {
                 notifications.length > 0 ?
                     notifications.map(notification => (

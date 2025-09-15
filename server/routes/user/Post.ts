@@ -11,12 +11,10 @@ PostRouter.get('/get-posts', Authorization, PostController.GetPosts);
 //PostRouter.get('/get-post/:ownerId/:id', Authorization, PostController.GetSpecificPost);
 
 PostRouter.post('/add-post', Authorization, PostController.AddPost);
-PostRouter.post('/add-report', Authorization, PostController.ReportPost);
 PostRouter.post('/add-like/:id', Authorization, PostController.AddLike);
 PostRouter.post('/add-comment', Authorization, PostController.AddComment);
 PostRouter.post('/add-comment-like', Authorization, PostController.LikeComment);
-
-PostRouter.delete('/delete-post/:id', Authorization, PostController.DeletePost);
-PostRouter.delete('/delete-comment/:commentId/:postId', Authorization, PostController.DeleteComment);
+PostRouter.post('/delete-post/:id', Authorization, PostController.DeletePost);
+PostRouter.post('/delete-comment/:commentId/:postId', Authorization, PostController.DeleteComment);
 
 export default PostRouter;

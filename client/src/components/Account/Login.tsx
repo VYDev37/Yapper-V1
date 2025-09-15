@@ -19,8 +19,9 @@ interface Alert {
 export default function Login() {
     const navigate = useNavigate();
     const [type, setType] = React.useState<string>('password');
+    const [loading, setLoading] = React.useState<boolean>(false);
 
-    const { loading, RefreshUser } = useUser();
+    const { RefreshUser } = useUser();
 
     const [loginData, setLoginData] = React.useState<LoginData>({
         username: '',
@@ -39,9 +40,11 @@ export default function Login() {
             return;
 
         try {
+            setLoading(true);
             const response = await axios.post('/login', loginData);
             if (response.status === 200) {
-                RefreshUser();
+                await RefreshUser();
+                //await UpdateUser();
                 setAlert({
                     message: response.data.message || 'Login successful!',
                     isError: false
@@ -58,12 +61,12 @@ export default function Login() {
                 message: error?.message || 'An error occurred during login.',
                 isError: true
             });
+        } finally {
+            setLoading(false);
         }
     };
 
-    const HandleToggle = () => {
-        setType(type === 'password' ? 'text' : 'password');
-    }
+    const HandleToggle = () => setType(type === 'password' ? 'text' : 'password');
 
     return (
         <div className="container-fluid login-container px-4 py-1 d-flex justify-content-center align-items-center vh-100"

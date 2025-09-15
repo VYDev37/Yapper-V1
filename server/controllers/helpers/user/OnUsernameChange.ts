@@ -18,9 +18,12 @@ const OnUsernameChange = async (c: Context, body: UsernameChangeBody, userId: nu
     if (username.length < 3 || username.length > 18 || !NoSpecialChar(username))
         return c.json({ message: "Username must only consists of 3-18 characters and no special character." }, HTTPStatus.CONFLICT);
 
+    const self = await db.query.users.findFirst({ where: eq(users.id, userId) });
     const existingUser = await db.query.users.findFirst({ where: eq(users.username, username) });
 
-    if (existingUser)
+    //console.log(existingUser?.username, username, self?.username, username === self?.username?.trim().toLowerCase());
+
+    if (existingUser && self?.username?.trim().toLowerCase() !== username)
         return c.json({ message: 'Username or email already used.' }, HTTPStatus.CONFLICT);
 
     await db.update(users).set({ username: username }).where(eq(users.id, userId));

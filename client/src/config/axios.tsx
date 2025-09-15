@@ -10,7 +10,7 @@ const axiosInstance = axios.create({
 
 axiosInstance.interceptors.response.use(
     response => response,
-    error => {
+    async (error) => {
         if (axios.isAxiosError(error)) {
             const customMessage = error.response?.data?.message || error.message || 'Something went wrong.';
             return Promise.reject(new Error(customMessage));

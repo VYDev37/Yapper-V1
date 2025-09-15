@@ -17,7 +17,14 @@ export default function RelatedUsers({ search }: RelatedUserProps) {
         FetchPost(search, '');
     }, [search]);
 
-    const displayedRelated = search ? posts.slice(0, 4) : posts;
+    const uniqueUsers = posts.reduce((acc: any[], post) => {
+        if (!acc.find(u => u.ownerId === post.ownerId)) {
+            acc.push(post);
+        }
+        return acc;
+    }, []);
+
+    const displayedRelated = search ? uniqueUsers.slice(0, 4) : uniqueUsers;
 
     return (
         <div>
