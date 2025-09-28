@@ -83,6 +83,7 @@ export const reportLogs = pgTable('reports', {
   reason: text('reason').notNull(),
   logType: text('log_type').notNull().default('Reported'),
   duration: bigint('duration', { mode: 'number' }).default(0),
+  approved: smallint('approved').notNull().default(-1),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow()
 });
 

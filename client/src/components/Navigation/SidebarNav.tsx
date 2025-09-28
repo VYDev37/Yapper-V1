@@ -1,10 +1,11 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import vitelogo from '../../assets/vite.svg';
 
 import { useUser } from '../../context/UserContext';
 
 export default function Sidebar() {
     const { user } = useUser();
+    const navigate = useNavigate();
 
     return (
         <div className="sidebar-container d-flex h-100 ms-auto mr-auto" style={{ padding: '0 10px' }}>
@@ -44,11 +45,8 @@ export default function Sidebar() {
                             <span className="d-none d-md-inline">Audit Logs</span>
                         </NavLink>
                     )}
-                    <a
-                        className="btn btn-yapper text-decoration-none round-30 mt-3 ms-3"
-                        href="/home#post-message-content"
-                        style={{ height: '50px' }}
-                    >
+                    <a className="btn btn-yapper text-decoration-none round-30 mt-3 ms-3"
+                        onClick={() => navigate("/home#post-message-content")} style={{ height: '50px' }}>
                         Post
                     </a>
 

@@ -51,3 +51,10 @@
 - Added more details to Audit Logs
 ### Fixed
 - Fixed bug when finding user that doesn't exist (instead of showing self, it shows 404)
+
+## [1.1.1]
+### Added
+- Request & Approval for Verified Status
+- Find user from 'Search' page
+### Changed
+- Changed the redirection way of `Sidebar Post` button & `View User` button

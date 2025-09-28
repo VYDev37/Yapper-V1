@@ -25,7 +25,7 @@ export default function SearchPage() {
                         </form>
                     </div>
 
-                    <Posts search={query} isMain={true} />
+                    <Posts search={query} isMain={true} isSearchingUser={true} />
                 </div>
                 {/* Found users page */}
                 <div className="col-3 search-users">

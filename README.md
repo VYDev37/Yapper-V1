@@ -52,7 +52,7 @@ Note: If the `schema.sql` file is broken, you can just generate new one with com
 - [x] Upload, Like and Delete posts (images are also supported)
 - [x] Comment Post (Add, load, reply, like, like reply, and delete)
 - [x] Report Post
-- [x] Search Posts
+- [x] Search Posts (Search User + Post)
 - [x] Administrator / Developer Features (Ban User, Unban User)
 - [x] Viewing Profile + Functionalities including: Follow, View User Posts, Block User, and Edit (for owners)
 - [x] Notifications Page

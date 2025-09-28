@@ -231,7 +231,7 @@ export default class PostController {
             const { commentId, postId } = c.req.param();
             const { security_code } = await c.req.json();
 
-            const userDB = await db.query.users.findFirst({ where: eq(users.id, +user.id || 0) });
+            const userDB = await db.query.users.findFirst({ where: eq(users.id, +user.id || -1) });
             if (!userDB)
                 return c.json({ message: "Forbidden access." }, HTTPStatus.FORBIDDEN);
 
@@ -278,7 +278,7 @@ export default class PostController {
             const postId: number = +(c.req.param("id") || 0);
             const { security_code } = await c.req.json();
 
-            const userDB = await db.query.users.findFirst({ where: eq(users.id, +user.id || 0) });
+            const userDB = await db.query.users.findFirst({ where: eq(users.id, +user.id || -1) });
             if (!userDB)
                 return c.json({ message: "Forbidden access." }, HTTPStatus.FORBIDDEN);
 

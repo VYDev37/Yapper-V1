@@ -1,14 +1,17 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 
+import SwalUtility from "../../utilities/SwalUtility";
 import { GetTimePast, Truncate, MsToString } from "../../utilities/Format";
 import { axios } from "../../config";
 
 interface AuditLogObj {
     id: number;
+    reporterId: number;
     postId: number;
     commentId: number;
     postAttachment: number;
+    approved: number;
     postOwner: number;
     duration: number;
     reason: string;
@@ -21,9 +24,19 @@ interface AuditLogObj {
     createdAt: Date;
 }
 
-export default function report() {
+export default function AuditLogs() {
     const [reports, setReports] = React.useState<AuditLogObj[]>([]);
     const navigate = useNavigate();
+
+    const FetchReports = async () => {
+        try {
+            const response = await axios.get('/get-reports');
+            setReports(response.data.reports);
+        } catch (_) {
+            //console.log(err);
+            setReports([]);
+        }
+    }
 
     const HandleNavigation = async (postOwner: number | null, postId: number | null, commentId: number | null) => {
         if (!postId || !postOwner)
@@ -32,18 +45,23 @@ export default function report() {
         window.location.replace(`/post/${postOwner}/${postId}${commentId ? `#${commentId}` : ""}`);
     }
 
-    React.useEffect(() => {
-        const fn = async () => {
-            try {
-                const response = await axios.get('/get-reports');
-                setReports(response.data.reports);
-            } catch (err) {
-                console.log(err);
-                setReports([]);
+    const HandleApproval = async (userId: number) => {
+        try {
+            const response = await axios.patch(`/approve-verification-request/${userId}`);
+            if (response.status === 200) {
+                await SwalUtility.SendMessage("Request Approved", response.data.message, "success"); 
+                await FetchReports();
+            } else {
+                await SwalUtility.SendMessage("Error", response.data.message, "error");
             }
+        } catch (err: any) {
+            console.log(err);
+            await SwalUtility.SendMessage("Error", "Something went wrong.", "error", err.message);
         }
+    }
 
-        fn();
+    React.useEffect(() => {
+        FetchReports();
     }, []);
 
     return (
@@ -86,6 +104,9 @@ export default function report() {
                                 </div>
                                 {report.postAttachment && (
                                     <img src={`/public/${report.postAttachment}`} alt="" className="ms-auto rounded-0 me-3" style={{ height: '80px', width: '80px', minHeight: '80px', minWidth: '80px', objectFit: 'cover' }} />
+                                )}
+                                {report.approved !== -1 && (
+                                    <button className="btn btn-yapper ms-auto" style={{ width: '120px' }} disabled={report.approved === 1} onClick={() => HandleApproval(report.reporterId)}>Approve</button>
                                 )}
                             </div>
                         </div>

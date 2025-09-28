@@ -21,6 +21,16 @@ export default function Settings() {
     const { user, UpdateUser, RefreshUser, Logout } = useUser();
     const [loading, setLoading] = useState<boolean>(false);
 
+    const HandleVerified = async () => {
+        try {
+            const result = await axios.post('send-verification-request');
+            if (result.status === 200)
+                await SwalUtility.SendMessage("Success", result.data.message, "success");
+        } catch (err: any) {
+            await SwalUtility.SendMessage("Failed", err.message, "error");
+        }
+    }
+
     const HandleVerification = async () => {
         if (user?.email_verified)
             return;
@@ -186,10 +196,10 @@ export default function Settings() {
             name: "Get Verified Status",
             description: user?.verified ? "You're already a verified user." : "Request your account to be verified user here.",
             icon: "fa-address-card",
-            infoText: "Once your account is verified, you will get a blue check icon beside your name.",
+            infoText: "Once your account is verified, you will get a blue check icon beside your name. You must have at least 1,000 followers to request.",
             button: {
                 text: "Request Verification",
-                OnExecute: HandleVerification,
+                OnExecute: HandleVerified,
                 disabled: user?.verified
             }
         },

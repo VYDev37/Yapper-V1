@@ -49,7 +49,7 @@ export default function RelatedUsers({ search }: RelatedUserProps) {
                                             </div>
                                         </div>
                                     </div>
-                                    <a href={`/profile/${users.username}`} className="btn btn-yapper rounded-30" style={{ width: '60px', height: '40px', marginTop: '10px' }}>Visit</a>
+                                    <a onClick={() => navigate(`/profile/${users.username}`)} className="btn btn-yapper rounded-30" style={{ width: '60px', height: '40px', marginTop: '10px' }}>Visit</a>
                                 </div>
 
                             </div>

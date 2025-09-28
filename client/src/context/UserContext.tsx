@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 
 import { GetUser, GetExtra } from '../hooks';
 import { axios } from '../config';
@@ -37,6 +37,7 @@ interface UserContextType {
     RefreshUser: () => Promise<void>;
     UpdateUser: () => Promise<void>;
     ReportUser: (userId: number) => Promise<void>;
+    GetUsers: (username?: string) => Promise<User[]>;
     Logout: () => Promise<void>;
 }
 
@@ -46,6 +47,15 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [user, setUser] = useState<User | null>(null);
     const [socket, setSocket] = useState<WebSocket>();
     const [loading, setLoading] = useState(true);
+
+    const GetUsers = useCallback(async (username?: string) => {
+        try {
+            const result = await axios.get(`/get-users/${username}`);
+            return result.status === 200 ? (result.data.users as User[]) : [];
+        } catch {
+            return [];
+        }
+    }, []);
 
     const FetchUser = async () => {
         setLoading(true);
@@ -160,6 +170,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         RefreshUser: FetchUser,
         UpdateUser: ResyncUser,
         ReportUser,
+        GetUsers,
         Logout,
     };
 

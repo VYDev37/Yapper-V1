@@ -74,7 +74,7 @@ export default class ModerationController {
 
     static async GetReports(c: Context) {
         const user = c.get("user");
-        const userDB = await db.query.users.findFirst({ where: eq(users.id, +user.id || 0) });
+        const userDB = await db.query.users.findFirst({ where: eq(users.id, +user.id || -1) });
         if (!userDB || userDB.role_id < 2)
             return c.json({ message: "Forbidden access." }, HTTPStatus.FORBIDDEN);
 
@@ -82,8 +82,8 @@ export default class ModerationController {
             const reporters = alias(users, "reporters");
             const result = await db.select({
                 id: reportLogs.id, reason: reportLogs.reason, createdAt: reportLogs.createdAt, logType: reportLogs.logType,
-                postId: reportLogs.postId, commentId: reportLogs.commentId, duration: reportLogs.duration,
-                postAttachment: posts.imageUrl, postDescription: posts.description, postOwner: posts.ownerId, reporter: reporters.username,
+                postId: reportLogs.postId, commentId: reportLogs.commentId, duration: reportLogs.duration, approved: reportLogs.approved, 
+                postAttachment: posts.imageUrl, postDescription: posts.description, postOwner: posts.ownerId, reporter: reporters.username, reporterId: reporters.id,
                 username: users.username, verified: users.verified, profileUrl: users.profileUrl
             }).from(reportLogs)
                 .leftJoin(users, eq(reportLogs.userId, users.id))
@@ -102,7 +102,7 @@ export default class ModerationController {
             const id = +(c.req.param('id') || 0);
             const user = c.get("user");
 
-            const userDB = await db.query.users.findFirst({ where: eq(users.id, +user.id || 0) });
+            const userDB = await db.query.users.findFirst({ where: eq(users.id, +user.id || -1) });
             const targetDB = await db.query.users.findFirst({ where: eq(users.id, +id) });
 
             if (!userDB)
@@ -133,10 +133,7 @@ export default class ModerationController {
             const user = c.get('user');
             const id: number = +c.req.param('id');
 
-            if (!user)
-                return c.json({ message: "Access forbidden." }, HTTPStatus.FORBIDDEN);
-
-            const userDB = await db.query.users.findFirst({ where: eq(users.id, +user.id) });
+            const userDB = await db.query.users.findFirst({ where: eq(users.id, +user.id || -1) });
             if (!userDB)
                 return c.json({ message: "Access forbidden." }, HTTPStatus.FORBIDDEN);
 
@@ -231,4 +228,31 @@ export default class ModerationController {
         }
     }
 
+    static async ApproveRequest(c: Context) {
+        try {
+            const userId: number = +c.req.param('id') || -1;
+
+            const user = c.get("user");
+            const userDB = await db.query.users.findFirst({ where: eq(users.id, +user.id || -1) });
+            if (!userDB || userDB.role_id < 2)
+                return c.json({ message: "Access forbidden." }, HTTPStatus.FORBIDDEN);
+
+            const targetDB = await db.query.users.findFirst({ where: eq(users.id, userId) });
+            if (!targetDB)
+                return c.json({ message: "User not found." }, HTTPStatus.NOT_FOUND);
+
+            const where = and(eq(reportLogs.reporterId, targetDB.id), eq(reportLogs.userId, targetDB.id), eq(reportLogs.logType, "Verification requested"));
+            const request = await db.query.reportLogs.findFirst({ where  });
+            if (!request || request.approved !== 0 || targetDB.verified)
+                return c.json({ message: "Request not found." }, HTTPStatus.NOT_FOUND);
+
+            await db.update(reportLogs).set({ approved: 1 }).where(where);
+            await db.update(users).set({ verified: true }).where(eq(users.id, targetDB.id));
+
+            return c.json({ message: "Request approved." }, HTTPStatus.OK);
+        } catch (err) {
+            console.error(err);
+            return c.json({ message: "Internal server error." }, HTTPStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }

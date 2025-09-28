@@ -179,6 +179,7 @@ CREATE TABLE IF NOT EXISTS "reports" (
 	"post_id" bigint,
 	"comment_id" bigint,
     "duration" bigint DEFAULT 0,
+    "approved" smallint DEFAULT -1 NOT NULL,
 	"reason" text NOT NULL,
     "log_type" text DEFAULT 'Reported' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now(),

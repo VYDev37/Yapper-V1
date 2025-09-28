@@ -12,4 +12,6 @@ ModerationRouter.post('/add-follower/:id', Authorization, ModerationController.A
 ModerationRouter.post('/add-report/:type', Authorization, ModerationController.AddReport);
 ModerationRouter.post('/add-ban', Authorization, ModerationController.BanUser);
 
+ModerationRouter.patch('/approve-verification-request/:id', Authorization, ModerationController.ApproveRequest);
+
 export default ModerationRouter;
