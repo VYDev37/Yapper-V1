@@ -7,6 +7,15 @@ export default function Sidebar() {
     const { user } = useUser();
     const navigate = useNavigate();
 
+    const navLinks = [
+        { id: 1, label: "Home", ref: "/home", icon: "fas fa-home" },
+        { id: 2, label: "Search", ref: "/search", icon: "fas fa-magnifying-glass" },
+        { id: 3, label: "Profile", ref: "/profile", icon: "fas fa-user" },
+        { id: 4, label: "Messages", ref: "/message", icon: "fas fa-envelope" },
+        { id: 5, label: "Notifications", ref: "/notification", icon: "fas fa-bell" },
+        { id: 6, label: "Settings", ref: "/settings", icon: "fas fa-cog" }
+    ];
+
     return (
         <div className="sidebar-container d-flex h-100 ms-auto mr-auto" style={{ padding: '0 10px' }}>
             <div className="sidebar position-fixed mt-4 px-5 border-yapper-right">
@@ -15,30 +24,12 @@ export default function Sidebar() {
                     <h3 className="sidebar-title mt-1 mx-2" style={{ fontWeight: '800' }}>Yapper</h3>
                 </div>
                 <div className="nav flex-column">
-                    <NavLink to="/home" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
-                        <i className="fas fa-home"></i>
-                        <span className="d-none d-md-inline">Home</span>
-                    </NavLink>
-                    <NavLink to="/search" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
-                        <i className="fas fa-magnifying-glass"></i>
-                        <span className="d-none d-md-inline">Search</span>
-                    </NavLink>
-                    <NavLink to="/profile" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
-                        <i className="fas fa-user"></i>
-                        <span className="d-none d-md-inline">Profile</span>
-                    </NavLink>
-                    <NavLink to="/messages" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
-                        <i className="fas fa-envelope"></i>
-                        <span className="d-none d-md-inline">Messages</span>
-                    </NavLink>
-                    <NavLink to="/notification" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
-                        <i className="fas fa-bell"></i>
-                        <span className="d-none d-md-inline">Notifications</span>
-                    </NavLink>
-                    <NavLink to="/settings" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
-                        <i className="fas fa-cog"></i>
-                        <span className="d-none d-md-inline">Settings</span>
-                    </NavLink>
+                    {navLinks.map(link => (
+                        <NavLink to={link.ref} key={link.id} className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
+                            <i className={link.icon}></i>
+                            <span className="d-none d-md-inline">{link.label}</span>
+                        </NavLink>
+                    ))}
                     {user?.role_id! >= 2 && (
                         <NavLink to="/admin/audit-logs" className={({ isActive }) => "nav-link" + (isActive ? " active" : "")}>
                             <i className="fas fa-history"></i>

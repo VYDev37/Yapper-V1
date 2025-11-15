@@ -58,3 +58,14 @@
 - Find user from 'Search' page
 ### Changed
 - Changed the redirection way of `Sidebar Post` button & `View User` button
+
+## [1.2.0]
+### Added
+- Post Image View
+- Mobile Navigation Bar
+- Comment Sort System
+- Reply Sort System
+### Changed
+- Changed the comment and reply sorting method.
+- Changed some pages col to make it more mobile friendly.
+- All post card now uses single layout.

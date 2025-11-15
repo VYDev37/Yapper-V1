@@ -1,11 +1,14 @@
 import React from "react";
 
+import { IsMobile } from "../../hooks";
 import { Posts, RelatedUsers } from "./Helper/Posts";
 
 export default function SearchPage() {
     const [search, setSearch] = React.useState<string>('');
     const [query, setQuery] = React.useState<string>('');
-    
+
+    const isMobile = IsMobile();
+
     const SearchPost = async (e: React.FormEvent) => {
         e.preventDefault();
         setQuery(search);
@@ -15,7 +18,7 @@ export default function SearchPage() {
         <div className="container-fluid search-container w-100 h-100">
             <div className="row">
                 {/* Main: Found posts page + search */}
-                <div className="col-9 search-posts border-yapper-right min-vh-100">
+                <div className={`col-${isMobile ? "12" : "9"} search-posts border-yapper-right min-vh-100`}>
                     <div className="search-box w-100 position-relative mt-3">
                         <form className="d-flex" onSubmit={(e) => SearchPost(e)}>
                             <i className="fas fa-search position-absolute top-50 translate-middle-y" style={{ left: "8px", color: "#888" }}></i>
@@ -28,12 +31,16 @@ export default function SearchPage() {
                     <Posts search={query} isMain={true} isSearchingUser={true} />
                 </div>
                 {/* Found users page */}
-                <div className="col-3 search-users">
-                    <div className="home-header position-sticky top-0 bg-white p-3">
-                        <h3 className="fs-5 fw-bold">Related Users</h3>
-                    </div>
-                    <RelatedUsers search={query} />
-                </div>
+                {
+                    !isMobile && (
+                        <div className="col-3 search-users">
+                            <div className="home-header position-sticky top-0 bg-white p-3">
+                                <h3 className="fs-5 fw-bold">Related Users</h3>
+                            </div>
+                            <RelatedUsers search={query} />
+                        </div>
+                    )
+                }
             </div>
         </div>
     )

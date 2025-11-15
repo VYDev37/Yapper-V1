@@ -146,6 +146,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     //console.log("🚪 Server requested logout");
                     await axios.post('/logout');
                     window.location.href = "/login";
+                } else {
+                    // incoming update: admin broadcast
                 }
             };
 

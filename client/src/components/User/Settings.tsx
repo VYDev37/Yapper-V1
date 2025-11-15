@@ -231,7 +231,7 @@ export default function Settings() {
 
     return (
         <div className="container-fluid settings-container">
-            <div className="col-11">
+            <div className="col-12 col-md-11">
                 <h3 className="pt-4 mt-1 fw-bold">Settings Page</h3>
                 <div className="row mx-1 mt-4">
                     {options.map((option, id) => (

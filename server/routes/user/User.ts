@@ -19,6 +19,7 @@ UserRouter.get('/user-info/:username', Authorization, (c) => UserController.GetP
 
 // Notifications
 UserRouter.get('get-notifications', Authorization, UserController.GetNotifications);
+UserRouter.put('/read-notification/:id', Authorization, UserController.SetNotificationRead);
 
 UserRouter.patch('/update-data/:type/:id', Authorization, UserController.UpdateUser);
 

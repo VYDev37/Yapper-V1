@@ -163,3 +163,19 @@ body {
 .search-posts input:focus {
     outline: 1px solid var(--yapper-color);
 }
+
+.close-button:hover,
+.close-button:focus {
+    opacity: 1;
+}
+
+@keyframes zoomIn {
+    from {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}

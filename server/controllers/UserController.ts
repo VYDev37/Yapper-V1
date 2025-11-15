@@ -211,6 +211,25 @@ export default class UserController {
         }
     }
 
+    static async SetNotificationRead(c: Context) {
+        try {
+            const id = +(c.req.param('id') || 0);
+
+            const user = c.get('user');
+            if (!user)
+                return c.json({ message: "Access Forbidden." }, HTTPStatus.FORBIDDEN);
+
+            const notification = await db.query.notifications.findFirst({ where: eq(notifications.id, id) });
+            if (notification && !notification.isRead)
+                await db.update(notifications).set({ isRead: true }).where(eq(notifications.id, notification.id));
+
+            return c.json({ message: "Success." }, HTTPStatus.OK);
+        } catch (err) {
+            console.error(err);
+            return c.json({ message: "Internal server error." }, HTTPStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     static async RequestVerification(c: Context) {
         try {
             const user = c.get("user");

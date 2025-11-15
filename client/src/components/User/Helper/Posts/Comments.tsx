@@ -55,7 +55,7 @@ export default function Comments({ comment, user, postOwner, HandleReply, Report
     }
 
     return (
-        <div className="d-flex align-items-start py-2 flex-shrink" id={`${comment.id}`}>
+        <div className="d-flex align-items-start py-2 flex-shrink px-2" id={`${comment.id}`}>
             <img src={`/public/profile-pics/${comment.profileUrl}`} role="button" onClick={() => navigate(`/profile/${comment.username}`)} alt="profile" className="rounded-circle me-3" width="40" height="40" />
             <div className="flex-grow-1">
                 <div className="mb-1 text-break text-wrap">

@@ -3,6 +3,7 @@ import { axios } from '../../config';
 
 import ViteLogo from '../../assets/vite.svg';
 
+import { IsMobile } from '../../hooks';
 import SwalUtility from '../../utilities/SwalUtility';
 import { HandlePreview, HandleUploadFile } from '../../utilities/HandleFile';
 
@@ -16,6 +17,8 @@ export default function Home() {
     const [file, setFile] = React.useState<File | null>(null);
     const [description, setDescription] = React.useState<string>('');
     const [previewUrl, setPreviewUrl] = React.useState<string>('');
+
+    const isMobile = IsMobile();
 
     const AutoResizeArea = (e: React.FormEvent<HTMLTextAreaElement>) => {
         const textarea: EventTarget & HTMLTextAreaElement = e.currentTarget;
@@ -51,10 +54,9 @@ export default function Home() {
                 setFile(null);
 
                 //formData = new FormData();
-
-                const res = await SwalUtility.SendSingleConfirmation("Success!", result.data?.message || "You have successfully added a new post.", "OK");
-                if (res.isConfirmed)
-                    RefreshUser();
+                // const res = await SwalUtility.SendSingleConfirmation("Success!", result.data?.message || "You have successfully added a new post.", "OK");
+                // if (res.isConfirmed)
+                RefreshUser();
             }
             else
                 SwalUtility.SendMessage("Error", "Something is wrong when trying to add post.", "error", result.data?.message || "An internal error occured.");
@@ -67,9 +69,9 @@ export default function Home() {
         return <div>Loading...</div>
 
     return (
-        <div className="container-fluid home-container h-100 px-0 min-vh-100" style={{ overflowY: 'auto' }}>
+        <div className="container-fluid ms-3 home-container h-100 px-0 min-vh-100" style={{ overflowY: 'auto', overflowX: 'hidden' }}>
             <div className="row home-page d-flex w-100 text-left gx-3">
-                <div className="col-9 home-content overflow-y-scroll border-yapper-right">
+                <div className="col-12 col-lg-9 home-content overflow-y-scroll border-yapper-right">
                     <div>
                         <div className="border-yapper">
                             <div className="home-header position-sticky top-0 bg-white border-yapper p-3" style={{ zIndex: '100' }}>
@@ -83,9 +85,9 @@ export default function Home() {
                                             id="post-message-content" className="border-0 ms-3 fs-5" style={{ flex: '1' }} onInput={(e) => AutoResizeArea(e)} required />
                                     </div>
                                     {previewUrl !== '' && (
-                                        <img src={previewUrl} style={{ marginLeft: '65px', marginRight: '65px', height: '350px', width: '350px', objectFit: 'cover' }} />
+                                        <img src={previewUrl} style={{ height: 'auto', width: '350px', objectFit: 'cover', maxWidth: '100%', maxHeight: '350px', display: 'block', margin: '0 auto' }} />
                                     )}
-                                    <div className="d-flex align-items-center justify-content-end px-4 gap-3 mt-3" style={{ marginLeft: '36px', marginRight: '36px' }}>
+                                    <div className="d-flex align-items-center justify-content-end px-4 gap-3 mt-3">
                                         <label htmlFor="input-post-img">
                                             <i className="fas fa-image fs-4" role="button"
                                                 style={{ WebkitTextStroke: '1px black' }}></i>
@@ -101,14 +103,18 @@ export default function Home() {
                         <Posts username="" isMain={true} />
                     </div>
                 </div>
-                <div className="col-3 text-center h-auto m-0" style={{ padding: '6px' }}>
-                    <div className="home-header position-sticky top-0 bg-white p-3">
-                        <h3 className="fs-5 fw-bold">Recent Posts</h3>
-                    </div>
-                    <div>
-                        <Posts username={user.username} isMain={false} />
-                    </div>
-                </div>
+                {
+                    !isMobile && (
+                        <div className="col-lg-3 text-center h-auto m-0" style={{ padding: '6px' }}>
+                            <div className="home-header position-sticky top-0 bg-white p-3">
+                                <h3 className="fs-5 fw-bold">Recent Posts</h3>
+                            </div>
+                            <div>
+                                <Posts username={user.username} isMain={false} />
+                            </div>
+                        </div>
+                    )
+                }
             </div>
         </div>
     )

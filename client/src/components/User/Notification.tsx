@@ -15,6 +15,7 @@ interface NotificationObj {
     postAttachment: string;
     username: string;
     verified: boolean;
+    isRead: boolean;
     createdAt: Date;
 }
 
@@ -22,10 +23,11 @@ export default function Notification() {
     const [notifications, setNotifications] = React.useState<NotificationObj[]>([]);
     const navigate = useNavigate();
 
-    const HandleNavigation = async (postOwner: number | null, postId: number | null, commentId: number | null) => {
+    const HandleNavigation = async (id: number, postOwner: number | null, postId: number | null, commentId: number | null) => {
         if (!postId || !postOwner)
             return;
 
+        await axios.put(`read-notification/${id}`);
         window.location.replace(`/post/${postOwner}/${postId}${commentId ? `#${commentId}` : ""}`);
     }
 
@@ -49,7 +51,7 @@ export default function Notification() {
             {
                 notifications.length > 0 ?
                     notifications.map(notification => (
-                        <div className="card my-3 shadow-sm border-0" onClick={() => HandleNavigation(notification.postOwner, notification.postId, notification.commentId)}>
+                        <div className="card my-3 shadow-sm border-0" onClick={() => HandleNavigation(notification.id, notification.postOwner, notification.postId, notification.commentId)}>
                             <div className="card-body d-flex align-items-start">
                                 <div className="me-3 text-danger">
                                     <i className="bi bi-heart-fill fs-4"></i>

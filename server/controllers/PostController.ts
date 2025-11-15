@@ -50,7 +50,7 @@ export default class PostController {
                 role_id: users.role_id
             }).from(postComments).leftJoin(users, eq(postComments.userId, users.id))
                 .where(inArray(postComments.postId, result.map(p => p.postId)))
-                .orderBy(desc(postComments.createdAt));
+                .orderBy(desc(postComments.replyCount), desc(postComments.likeCount), desc(postComments.createdAt));
 
             const commentLiked = await db.select({ commentId: postCommentLikes.commentId }).from(postCommentLikes).where(
                 and(inArray(postCommentLikes.commentId, comments.map(c => c.id)), eq(postCommentLikes.userId, +user.id)));
@@ -76,7 +76,8 @@ export default class PostController {
             const packedPosts = result.map(post => ({
                 ...post,
                 comments: comments.filter(c => c.postId === post.postId && !c.parentId)
-                    .map(c => ({ ...c, liked: likedComments.includes(c.id), blocked: blockedComments.includes(c.userId), replies: repliesMap[c.id] })),
+                    .map(c => ({ ...c, liked: likedComments.includes(c.id), blocked: blockedComments.includes(c.userId), 
+                        replies: repliesMap[c.id] ? repliesMap[c.id].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) : [] })),
                 liked: likedPosts.includes(post.postId)
             }));
 
